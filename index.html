@@ -90,7 +90,7 @@
     <div class="container">
         <div class="header">
             <h1>🃏 フラッシュカード</h1>
-            <p>全機能修正・統合版</p>
+            <p>26.01.22.2000-overwrite-sync</p>
         </div>
         <div class="content">
             <div class="action-area">
@@ -162,7 +162,7 @@
     </div>
 
     <script>
-        const VERSION = "26.01.22.1800-full-fix"; 
+        const VERSION = "26.01.22.2000-overwrite-sync"; 
         let decks = {}, currentDeckId = null, currentCardIndex = 0, displayOrder = [];
         let isShuffleOn = false, isUnmasteredOnly = false, isAnimating = false;
 
@@ -314,27 +314,73 @@
         function showToast(m) { const t = document.getElementById("toast"); t.textContent = m; t.className = "show"; setTimeout(() => t.className = "", 2000); }
 
         // ファイル読込 & 進捗バー
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0]; if(!file) return;
-            const overlay = document.getElementById('progressOverlay'), bar = document.getElementById('progressBar'), txt = document.getElementById('progressText');
-            overlay.style.display = 'flex';
+        // ファイル読込 & 進捗バー（同名デッキ上書き対応版）
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0]; 
+        if(!file) return;
+
+        const overlay = document.getElementById('progressOverlay'), 
+              bar = document.getElementById('progressBar'), 
+            txt = document.getElementById('progressText');
+    
+        overlay.style.display = 'flex';
+    
+        const reader = new FileReader();
+        reader.onprogress = (ev) => { 
+            if (ev.lengthComputable) { 
+                const p = Math.round((ev.loaded / ev.total) * 70); 
+                bar.style.width = p + '%'; 
+                txt.textContent = `読込中... ${p}%`; 
+            } 
+        };
+
+        reader.onload = (ev) => {
+            bar.style.width = '90%'; 
+            txt.textContent = '解析中... 90%';
+        
+            setTimeout(() => {
+                const data = new Uint8Array(ev.target.result), 
+                    wb = XLSX.read(data, {type: 'array'}), 
+                    sheet = wb.Sheets[wb.SheetNames[0]], 
+                    json = XLSX.utils.sheet_to_json(sheet, {header: 1});
             
-            const reader = new FileReader();
-            reader.onprogress = (ev) => { if (ev.lengthComputable) { const p = Math.round((ev.loaded / ev.total) * 70); bar.style.width = p + '%'; txt.textContent = `読込中... ${p}%`; } };
-            reader.onload = (ev) => {
-                bar.style.width = '90%'; txt.textContent = '解析中... 90%';
-                setTimeout(() => {
-                    const data = new Uint8Array(ev.target.result), wb = XLSX.read(data, {type: 'array'}), sheet = wb.Sheets[wb.SheetNames[0]], json = XLSX.utils.sheet_to_json(sheet, {header: 1});
-                    const cards = json.slice(1).filter(r => r[0] && r[1]).map(r => ({question: String(r[0]), answer: String(r[1]), mastered: false}));
-                    const id = 'deck_' + Date.now(); decks[id] = { name: file.name.replace(/\.[^/.]+$/, ''), cards };
-                    saveDecks(); renderDecks();
-                    bar.style.width = '100%'; txt.textContent = '完了！ 100%';
-                    setTimeout(() => overlay.style.display = 'none', 500);
-                    showToast("読込完了");
-                }, 100);
-            };
-            reader.readAsArrayBuffer(file);
-        });
+                const newCards = json.slice(1).filter(r => r[0] && r[1]).map(r => ({
+                    question: String(r[0]), 
+                    answer: String(r[1]), 
+                    mastered: false
+                }));
+
+                const fileNameNoExt = file.name.replace(/\.[^/.]+$/, '');
+            
+            // --- 上書きロジックの追加 ---
+            // 既存のデッキの中に、同じ名前のものがあるか探す
+                const existingDeckId = Object.keys(decks).find(id => decks[id].name === fileNameNoExt);
+
+                if (existingDeckId) {
+                // 同じ名前があれば、そのIDのカードデータを差し替える（上書き）
+                    decks[existingDeckId].cards = newCards;
+                    showToast(`デッキ「${fileNameNoExt}」を更新しました`);
+                } else {
+                // なければ新規作成
+                    const id = 'deck_' + Date.now(); 
+                    decks[id] = { name: fileNameNoExt, cards: newCards };
+                    showToast("新しいデッキを追加しました");
+                }
+            // --------------------------
+            
+                saveDecks(); 
+                renderDecks();
+            
+                bar.style.width = '100%'; 
+                txt.textContent = '完了！ 100%';
+            
+                e.target.value = ''; // 次回も同じファイルを選べるようにリセット
+
+                setTimeout(() => overlay.style.display = 'none', 500);
+            }, 100);
+        };
+        reader.readAsArrayBuffer(file);
+    });
     </script>
 </body>
 </html>
