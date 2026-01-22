@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
-    <title>フラッシュカード Pro完全版</title>
+    <title>フラッシュカード Pro完全版（スワイプ対応）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -324,16 +324,58 @@
             flex-direction: column;
             padding: 20px;
         }
-        /* 円グラフのスタイル */
-        .progress-container { display: flex; align-items: center; }
-        .progress-circle { transform: rotate(-90deg); }
-        .progress-circle circle { fill: none; stroke-width: 4; }
-        .progress-circle .bg { stroke: #e2e8f0; }
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .circle-wrapper {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .progress-circle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px !important;
+            height: 50px !important;
+            transform: rotate(-90deg);
+        }
+
+        .progress-circle circle {
+            fill: none;
+            stroke-width: 5;
+        }
+
+        .progress-circle .bg {
+            stroke: #e2e8f0;
+        }
+
         .progress-circle .fg {
             stroke: #667eea;
-            stroke-dasharray: 100; /* 2 * PI * r (16) ≒ 100 */
-            stroke-dashoffset: 100;
-            transition: stroke-dashoffset 0.3s;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s ease;
+        }
+
+        #progressPercentText {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #667eea;
+            z-index: 1;
+            line-height: 1;
+        }
+
+        #masteredCountText {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1rem;
         }
 
 /* 下部の進行状況バー */
@@ -379,7 +421,7 @@
                 <button onclick="setTheme('forest')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
             
-            <p>効率的な学習のための完全版 v26.1.22.Pro(Multi-Import Edition)</p>
+            <p>効率的な学習のための完全版 v26.1.22.1800</p>
         </div>
 
         <div class="content">
@@ -418,19 +460,22 @@
 
     <div class="flashcard-modal" id="flashcardModal">
         <div class="modal-header">
-            <div class="progress-container focus-hide" style="display: flex; align-items: center; position: relative;">
-                <svg class="progress-circle" width="50" height="50">
-                    <circle class="bg" cx="25" cy="25" r="20" style="fill:none; stroke:#e2e8f0; stroke-width:4;"></circle>
-                    <circle class="fg" id="progressCircle" cx="25" cy="25" r="20" style="fill:none; stroke:#667eea; stroke-width:4; stroke-dasharray:126; stroke-dashoffset:126; transition:stroke-dashoffset 0.3s; transform: rotate(-90deg); transform-origin: center;"></circle>
-                </svg>
-                <div id="progressPercentText" style="position: absolute; width: 50px; text-align: center; font-size: 0.7rem; font-weight: bold; color: #667eea; pointer-events: none;">0%</div>
-                <span id="masteredCountText" style="font-weight:bold; color:#667eea; margin-left:8px; font-size:0.9rem;">0/0</span>
+            <div class="progress-container focus-hide">
+                <div class="circle-wrapper">
+                    <svg class="progress-circle" viewBox="0 0 50 50">
+                        <circle class="bg" cx="25" cy="25" r="20"></circle>
+                        <circle class="fg" id="progressCircle" cx="25" cy="25" r="20"></circle>
+                    </svg>
+                    <div id="progressPercentText">0%</div>
+                </div>
+            
+                <div id="masteredCountText">0/0</div>
             </div>
 
             <div style="display:flex; gap:8px;">
                 <button id="focusModeBtn" class="btn btn-outline" onclick="toggleFocusMode()">👁️</button>
-                <button class="btn btn-outline focus-hide" onclick="showQR()">📤 QR</button>
-                <button class="btn btn-outline focus-hide" onclick="copyDeckAsText()">📋 コピー</button>
+                <button class="btn btn-outline focus-hide" onclick="showQR()">QR</button>
+                <button class="btn btn-outline focus-hide" onclick="copyDeckAsText()">📋</button>
                 <button class="btn btn-danger" onclick="closeFlashcards()">✕ 終了</button>
             </div>
         </div>
@@ -448,10 +493,10 @@
                 <button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:400px;" onclick="toggleMastered()">⬜ まだ習得していない</button>
             </div>
             <div class="focus-hide" style="display:flex; justify-content:center; gap:12px; margin-top:10px;">
-                <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀 シャッフル</button>
+                <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀</button>
                 <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯 未習得のみ</button>
-                <button class="btn btn-outline" onclick="toggleBulkEdit()">📝 編集</button>
-                <button id="repeatBtn" class="btn btn-outline" onclick="toggleRepeat()">🔁 リピート: OFF</button>
+                <button class="btn btn-outline" onclick="toggleBulkEdit()">📝</button>
+                <button id="repeatBtn" class="btn btn-outline" onclick="toggleRepeat()">🔁: OFF</button>
             </div>
         </div>
     </div>
@@ -740,36 +785,41 @@
         }
 
         function updateCardInfo() {
-            if (displayOrder.length === 0) return;
-            const deck = decks[currentDeckId];
-            const card = deck.cards[displayOrder[currentCardIndex]];
-    
-    // 習得状況の計算
-            const masteredCount = deck.cards.filter(function(c) { return c.mastered; }).length;
-            const totalCount = deck.cards.length;
-            const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+                if (displayOrder.length === 0) return;
+                const deck = decks[currentDeckId];
+                const card = deck.cards[displayOrder[currentCardIndex]];
 
-    // 1. 円グラフとテキストの更新
-            document.getElementById('masteredCountText').textContent = masteredCount + " / " + totalCount;
-            document.getElementById('progressPercentText').textContent = percent + "%";
-    
-    // 円グラフの計算 (半径20の場合 dasharrayは約126)
-            const dashArray = 126;
-            const offset = dashArray - (percent / 100 * dashArray);
-            const circle = document.getElementById('progressCircle');
-            if(circle) {
-                circle.style.strokeDashoffset = offset;
-            }
+                const masteredCount = deck.cards.filter(c => c.mastered).length;
+                const totalCount = deck.cards.length;
+                const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
 
-    // 2. 下部の進行バーの更新（何枚目か）
-            const progressPercent = ((currentCardIndex + 1) / displayOrder.length) * 100;
-            const bar = document.getElementById('linearProgressBar');
-            if(bar) bar.style.width = progressPercent + "%";
+                // テキスト更新
+                document.getElementById('masteredCountText').textContent = masteredCount + " / " + totalCount;
+                document.getElementById('progressPercentText').textContent = percent + "%";
 
-    // 3. ボタン表示の更新
-            const mBtn = document.getElementById('masteredBtn');
-            mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
-            mBtn.className = card.mastered ? 'btn btn-success' : 'btn btn-outline';
+                // --- 円グラフのバグ修正：PC・モバイル両対応 ---
+                const circle = document.getElementById('progressCircle');
+                if (circle) {
+                    const r = 20; // 半径
+                    const circumference = 2 * Math.PI * r; // 円周 (約125.66)
+
+                    // SVGのダッシュ設定を強制的に円周に合わせる
+                    circle.style.strokeDasharray = circumference;
+
+                    // 習得率に合わせてオフセットを計算
+                    const offset = circumference - (percent / 100 * circumference);
+                    circle.style.strokeDashoffset = offset;
+                }
+
+                // 下部の直線進行状況バー
+                const progressPercent = ((currentCardIndex + 1) / displayOrder.length) * 100;
+                const bar = document.getElementById('linearProgressBar');
+                if (bar) bar.style.width = progressPercent + "%";
+
+                // ボタンの状態更新
+                const mBtn = document.getElementById('masteredBtn');
+                mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
+                mBtn.className = card.mastered ? 'btn btn-success' : 'btn btn-outline';
         }
 
         function toggleMastered() {
@@ -1054,4 +1104,3 @@
     </script>
 </body>
 </html>
-
