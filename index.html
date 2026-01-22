@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FCp">
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#667eea">
+    <title>FLASHCARDS pro</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="apple-touch-icon" sizes="180×180" href="./apple-touch-icon-180x180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="単語帳Pro">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#667eea">
-    <title>フラッシュカード Pro完全版</title>
+    <meta name="apple-mobile-web-app-title" content="FCp">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -18,9 +23,33 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: pan-y; /* スワイプ判定のため縦方向のみ許可 */
+            touch-action: pan-y;
+            /* スワイプ判定のため縦方向のみ許可 */
         }
-        
+
+            /* Apple風 虹色グラデーション縁取り */
+        .apple-neon {
+            color: white; /* 文字自体は白 */
+            font-weight: bold;
+            font-size: 1.0rem;
+            background: transparent;
+    
+    /* 複数の色の光を重ねて縁取りを作る */
+            text-shadow: 
+                0 0 5px rgba(0, 163, 255, 0.8),   /* 青 */
+                0 0 10px rgba(186, 73, 255, 0.6),  /* 紫 */
+                0 0 15px rgba(255, 100, 100, 0.5), /* 赤・ピンク */
+                0 0 20px rgba(255, 200, 0, 0.4);   /* オレンジ・黄 */
+    
+    /* 滑らかなアニメーション（任意） */
+            animation: neon-glow 3s infinite alternate;
+        }
+
+        @keyframes neon-glow {
+            from { filter: brightness(1) saturate(1); }
+            to { filter: brightness(1.2) saturate(1.5); }
+        }
+
         /* bodyの背景をテーマ変数に変更 */
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -31,10 +60,10 @@
             flex-direction: column;
             color: #333;
             transition: background 0.5s ease;
-         /* 横幅がズレないように固定 */
+            /* 横幅がズレないように固定 */
         }
 
-/* ヘッダーの背景も連動 */
+        /* ヘッダーの背景も連動 */
 
 
         /* メインコンテナ */
@@ -44,7 +73,7 @@
             margin: 0 auto;
             background: #f8fafc;
             border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -102,7 +131,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
         .deck-info b {
@@ -140,11 +169,31 @@
             transform: scale(0.95);
         }
 
-        .btn-primary { background: #667eea; color: white; }
-        .btn-success { background: #10b981; color: white; }
-        .btn-danger { background: #fc8181; color: white; }
-        .btn-outline { border: 2px solid #e2e8f0; background: white; color: #4a5568; }
-        .btn-active { background: #f59e0b; color: white; }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #fc8181;
+            color: white;
+        }
+
+        .btn-outline {
+            border: 2px solid #e2e8f0;
+            background: white;
+            color: #4a5568;
+        }
+
+        .btn-active {
+            background: #f59e0b;
+            color: white;
+        }
 
         /* 学習モーダル */
         .flashcard-modal {
@@ -165,7 +214,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         /* スライダーエリア */
@@ -209,12 +258,15 @@
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
 
-    /* --- 追加部分 --- */
-            -webkit-backface-visibility: hidden; /* 裏面の計算をサボらせる */
+            /* --- 追加部分 --- */
+            -webkit-backface-visibility: hidden;
+            /* 裏面の計算をサボらせる */
             backface-visibility: hidden;
-            -webkit-transform: translate3d(0,0,0); /* 常に3Dモードで高速化 */
-            transform: translate3d(0,0,0);
-            will-change: transform; /* 回転する準備をあらかじめさせる */
+            -webkit-transform: translate3d(0, 0, 0);
+            /* 常に3Dモードで高速化 */
+            transform: translate3d(0, 0, 0);
+            will-change: transform;
+            /* 回転する準備をあらかじめさせる */
         }
 
         .flashcard-face {
@@ -230,7 +282,7 @@
             font-size: clamp(1.2rem, 5vw, 2rem);
             text-align: center;
             font-weight: bold;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             background: white;
             border: 2px solid #e2e8f0;
         }
@@ -303,11 +355,11 @@
             visibility: hidden;
             pointer-events: none;
         }
-        
+
         #toast {
             visibility: hidden;
             min-width: 200px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             color: #fff;
             text-align: center;
             border-radius: 50px;
@@ -330,13 +382,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 3000;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             padding: 20px;
         }
+
         .progress-container {
             display: flex;
             align-items: center;
@@ -391,11 +444,19 @@
             font-size: 1rem;
         }
 
-/* 下部の進行状況バー */
-        .linear-progress-wrapper { width: 100%; height: 6px; background: #e2e8f0; position: relative; }
-        .linear-progress-bar { 
-            height: 100%; width: 0%; background: #667eea; 
-            transition: width 0.3s ease; 
+        /* 下部の進行状況バー */
+        .linear-progress-wrapper {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            position: relative;
+        }
+
+        .linear-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #667eea;
+            transition: width 0.3s ease;
         }
 
         .credit-container {
@@ -407,7 +468,8 @@
         }
 
         .credit-content {
-            display: none; /* 最初は隠す */
+            display: none;
+            /* 最初は隠す */
             margin-top: 10px;
             padding: 10px;
             background: #f9f9f9;
@@ -422,52 +484,84 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
         <div class="header">
-            <h1>🃏 フラッシュカード Pro</h1>
+            <h1>🃏FLASHCARD pro</h1>
             <div style="text-align: center; margin-bottom: 15px; display: flex; justify-content: center; gap: 8px;">
-                <button onclick="setTheme('default')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); border: 2px solid white; cursor: pointer;"></button>
-                <button onclick="setTheme('sunset')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #ff9a9e, #fad0c4); border: 2px solid white; cursor: pointer;"></button>
-                <button onclick="setTheme('ocean')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #4facfe, #00f2fe); border: 2px solid white; cursor: pointer;"></button>
-                <button onclick="setTheme('forest')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('default')"
+                    style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('sunset')"
+                    style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #ff9a9e, #fad0c4); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('ocean')"
+                    style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #4facfe, #00f2fe); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('forest')"
+                    style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
-            
-            <p>効率的な学習のための完全版 v26.1.23.100.</p>
+
+            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease</p>
         </div>
 
         <div class="content">
             <div class="action-area">
                 <div class="upload-section">
-                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" multiple onchange="importExcelFiles(event)">
-                    <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('fileInput').click()">📁 Excelから読み込み</button>
-                    <p>A列に問題、B列に答えを入力したファイルを読み込めます</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" multiple
+                        onchange="importExcelFiles(event)">
+                    <button class="btn btn-primary" style="width:100%; height: 50px; font-size: 1rem;"
+                        onclick="document.getElementById('fileInput').click()">
+                        📁 Excelから読み込み
+                    </button>
+                    <p>複数ファイルの一括取り込みに対応</p>
                 </div>
+            
                 <div style="grid-column: span 2; display: flex; gap: 8px;">
-                    <button class="btn btn-success" style="flex: 1;" onclick="createNewDeck()">➕ 新規デッキ</button>
-                    <button class="btn btn-outline" onclick="exportAllData()" title="保存">📤</button>
-                    <button class="btn btn-outline" onclick="document.getElementById('importFile').click()" title="復元">📥</button>
+                    <button class="btn btn-success" style="flex: 2;" onclick="createNewDeck()">➕ 新規デッキ</button>
+                    <button class="btn btn-outline" style="flex: 0.5;" onclick="exportAllData()" title="保存">📤</button>
+                    <button class="btn btn-outline" style="flex: 0.5;" onclick="document.getElementById('importFile').click()"
+                        title="復元">📥</button>
                     <input type="file" id="importFile" style="display:none" accept=".json" onchange="importAllData(event)">
                 </div>
-
-                <button class="btn btn-outline" onclick="importFromText()">📝 テキスト読込</button>
-                <button class="btn btn-outline" onclick="startCamera()" style="grid-column: span 2;">📷 QRコード読込</button>
+            
+                <div style="grid-column: span 2; display: flex; gap: 8px;">
+                    <button class="btn btn-outline" style="flex: 1;" onclick="importFromText()">
+                        📝 テキスト読込
+                    </button>
+                    <button class="btn btn-outline" style="flex: 1;" onclick="startCamera()">
+                        📷 QR読込
+                    </button>
+                </div>
             </div>
 
             <div id="deckItems">
-                </div>
+            </div>
 
-                <div class="credit-container">
-                    <span class="credit-toggle" onclick="toggleCredit()">© クレジットを表示</span>
-                    <div id="creditContent" class="credit-content">
-                        制作:松崎仁<br>
-                        協力:Gemini chat-gpt claude<br>
-                        共同開発:森本明日翔　越田道秀<br>
-                        Version: 26.1.22<br>
-                        <small>Powered by Gemini & GitHub Community</small>
+            <div class="credit-container">
+                <span class="credit-toggle" onclick="toggleCredit()">© クレジットを表示</span>
+                <div id="creditContent" class="credit-content" style="font-family: -apple-system, sans-serif;">
+                    <p style="margin-bottom: 8px; font-weight: bold; color: #555;">Designed by Your Name in Japan</p>
+
+                    <div style="margin: 10px 0; color: #999;">
+                    制作: 松崎仁<br>
+                    共同開発: 森本明日翔 / 越田道秀<br>
+                    協力: Gemini / ChatGPT / Claude<br>
                     </div>
+                    <div style="margin: 8px 0; font-size: 0.75rem; color: #999;">
+                        Special Thanks: 中谷壮 / 東中彬裕
+                    </div>
+                    <p style="font-size: 0.75rem; color: #666; margin-top: 10px; line-height: 1.4;">
+                        初期開発における多大な貢献に感謝し、<br>
+                        全ての機能への<br>
+                        <strong>永続的なフルアクセス権</strong>を保証します。
+                    </p>
+                    <p style="margin-top: 8px; font-size: 0.75rem; color: #999;">Version: 26.1.23.104</p>
+                    Support:
+                    <a href="mailto:jin.matsusaki@gmail.com" style="color: #0066cc; text-decoration: none; font-size: 13px;">
+                        jin.matsusaki@gmail.com
+                    </a>
                 </div>
+            </div>
         </div>
     </div>
 
@@ -481,7 +575,7 @@
                     </svg>
                     <div id="progressPercentText">0%</div>
                 </div>
-            
+
                 <div id="masteredCountText">0/0</div>
             </div>
 
@@ -494,7 +588,8 @@
         </div>
 
         <div style="width:100%; height:6px; background:#e2e8f0;">
-            <div id="linearProgressBar" style="height:100%; width:0%; background:#667eea; transition:width 0.3s ease;"></div>
+            <div id="linearProgressBar" style="height:100%; width:0%; background:#667eea; transition:width 0.3s ease;">
+            </div>
         </div>
 
         <div class="slider-viewport" id="sliderViewport">
@@ -508,7 +603,7 @@
                     onclick="toggleFavorite()">
                     ☆
                 </button>
-            
+
                 <button id="masteredBtn" class="btn btn-outline" style="flex-grow: 1; max-width: 340px; height: 50px;"
                     onclick="toggleMastered()">
                     ⬜ まだ習得していない
@@ -516,7 +611,8 @@
             </div>
             <div class="focus-hide" style="display:flex; justify-content:center; gap:12px; margin-top:10px;">
                 <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀</button>
-                <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯 未習得のみ</button>
+                <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯
+                    未習得のみ</button>
                 <button class="btn btn-outline" onclick="toggleBulkEdit()">📝</button>
                 <button id="repeatBtn" class="btn btn-outline" onclick="toggleRepeat()">🔁: OFF</button>
             </div>
@@ -526,13 +622,14 @@
     <div id="bulkEditMode" class="bulk-edit-area">
         <h2 style="margin-bottom:20px;">カードリストの編集</h2>
 
-<div style="margin-bottom: 10px; width: 100%;">
-    <input type="text" id="cardSearch" placeholder="🔍 カードを検索..." oninput="renderBulkList()" 
-           style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box;">
-</div>
-<div class="bulk-list" id="bulkList"></div>
-        
-        <div style="background:#f7fafc; padding:20px; border-radius:15px; margin-bottom:20px; border: 1px solid #e2e8f0;">
+        <div style="margin-bottom: 10px; width: 100%;">
+            <input type="text" id="cardSearch" placeholder="🔍 カードを検索..." oninput="renderBulkList()"
+                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box;">
+        </div>
+        <div class="bulk-list" id="bulkList"></div>
+
+        <div
+            style="background:#f7fafc; padding:20px; border-radius:15px; margin-bottom:20px; border: 1px solid #e2e8f0;">
             <p style="margin-bottom:10px; font-weight:bold;">新しいカードを追加</p>
             <input type="text" id="newQ" placeholder="問題を入力" class="bulk-input" style="margin-bottom:10px;">
             <input type="text" id="newA" placeholder="答えを入力" class="bulk-input" style="margin-bottom:10px;">
@@ -541,7 +638,8 @@
         </div>
 
         <div style="display:flex; gap:15px;">
-            <button class="btn btn-success" style="flex:2; height:50px;" onclick="saveBulkChanges()">💾 変更を保存して閉じる</button>
+            <button class="btn btn-success" style="flex:2; height:50px;" onclick="saveBulkChanges()">💾
+                変更を保存して閉じる</button>
             <button class="btn btn-outline" style="flex:1;" onclick="toggleBulkEdit()">キャンセル</button>
         </div>
     </div>
@@ -575,7 +673,7 @@
         let touchStartX = 0;
         let touchEndX = 0;
 
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             const savedData = localStorage.getItem('flashcard_decks_v2');
             if (savedData) {
                 try {
@@ -593,28 +691,28 @@
 
         // --- メイン画面の処理 ---
         function renderDecks() {
-                const container = document.getElementById('deckItems');
-                container.innerHTML = '';
+            const container = document.getElementById('deckItems');
+            container.innerHTML = '';
 
-                // --- 1. お気に入りカードのカウント（表示用） ---
-                let allFavCards = [];
-                Object.keys(decks).forEach(id => {
-                    const favs = decks[id].cards.filter(c => c.favorite);
-                    favs.forEach(c => {
-                        allFavCards.push({ ...c, _originDeckId: id });
-                    });
+            // --- 1. お気に入りカードのカウント（表示用） ---
+            let allFavCards = [];
+            Object.keys(decks).forEach(id => {
+                const favs = decks[id].cards.filter(c => c.favorite);
+                favs.forEach(c => {
+                    allFavCards.push({ ...c, _originDeckId: id });
                 });
+            });
 
-                // --- 2. お気に入りフォルダの表示 (枚数に関わらず常に出す) ---
-                const favDiv = document.createElement('div');
-                favDiv.className = 'deck-item';
-                favDiv.style.border = "2px solid #ffcc00"; // お気に入りカラー
-                favDiv.style.background = "#fffdf0";      // ほんのり黄色い背景
+            // --- 2. お気に入りフォルダの表示 (枚数に関わらず常に出す) ---
+            const favDiv = document.createElement('div');
+            favDiv.className = 'deck-item';
+            favDiv.style.border = "2px solid #ffcc00"; // お気に入りカラー
+            favDiv.style.background = "#fffdf0";      // ほんのり黄色い背景
 
-                // 枚数によってボタンの有効/無効を切り替える（0枚なら押せなくする工夫）
-                const isDisable = allFavCards.length === 0 ? 'disabled style="background:#ccc; border:none; color:#fff; cursor:not-allowed;"' : 'style="background:#ffcc00; border:none; color:#fff;"';
+            // 枚数によってボタンの有効/無効を切り替える（0枚なら押せなくする工夫）
+            const isDisable = allFavCards.length === 0 ? 'disabled style="background:#ccc; border:none; color:#fff; cursor:not-allowed;"' : 'style="background:#ffcc00; border:none; color:#fff;"';
 
-                favDiv.innerHTML = `
+            favDiv.innerHTML = `
         <div class="deck-info">
             <b style="color: #d4af37;">🌟 お気に入りフォルダ</b>
             <small>${allFavCards.length} 枚のカード</small>
@@ -623,30 +721,30 @@
             <button class="btn btn-primary" ${isDisable} onclick="openFavoriteDeck()">学習</button>
         </div>
     `;
-                container.appendChild(favDiv);
+            container.appendChild(favDiv);
 
-                // --- 3. 既存のデッキ一覧を表示 ---
-                const keys = Object.keys(decks).sort(function (a, b) { return b - a; });
+            // --- 3. 既存のデッキ一覧を表示 ---
+            const keys = Object.keys(decks).sort(function (a, b) { return b - a; });
 
-                // デッキが一つもない場合
-                if (keys.length === 0) {
-                    const emptyMsg = document.createElement('p');
-                    emptyMsg.style = "text-align:center; color:#718096; margin-top:40px;";
-                    emptyMsg.textContent = "デッキがありません。";
-                    container.appendChild(emptyMsg);
-                    return;
-                }
+            // デッキが一つもない場合
+            if (keys.length === 0) {
+                const emptyMsg = document.createElement('p');
+                emptyMsg.style = "text-align:center; color:#718096; margin-top:40px;";
+                emptyMsg.textContent = "デッキがありません。";
+                container.appendChild(emptyMsg);
+                return;
+            }
 
-                // 各デッキを生成
-                keys.forEach(function (id) {
-                    const deck = decks[id];
-                    const masteredCount = deck.cards.filter(function (c) { return c.mastered; }).length;
-                    const totalCount = deck.cards.length;
-                    const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+            // 各デッキを生成
+            keys.forEach(function (id) {
+                const deck = decks[id];
+                const masteredCount = deck.cards.filter(function (c) { return c.mastered; }).length;
+                const totalCount = deck.cards.length;
+                const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
 
-                    const div = document.createElement('div');
-                    div.className = 'deck-item';
-                    div.innerHTML = `
+                const div = document.createElement('div');
+                div.className = 'deck-item';
+                div.innerHTML = `
             <div class="deck-info">
                 <b>${deck.name}</b>
                 <small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small>
@@ -657,8 +755,8 @@
                 <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
             </div>
         `;
-                    container.appendChild(div);
-                });
+                container.appendChild(div);
+            });
         }
 
         function createNewDeck() {
@@ -678,7 +776,7 @@
 
         function resetDeckProgress(id) {
             if (confirm("進捗をリセットしますか？")) {
-                decks[id].cards.forEach(function(card) { card.mastered = false; });
+                decks[id].cards.forEach(function (card) { card.mastered = false; });
                 saveToLocal(); renderDecks(); showToast("リセットしました");
             }
         }
@@ -691,9 +789,9 @@
         function copyDeckAsText() {
             const deck = decks[currentDeckId];
             if (!deck || deck.cards.length === 0) return;
-            const rawString = deck.name + "::" + deck.cards.map(function(c) { return c.question + "|" + c.answer; }).join("~");
+            const rawString = deck.name + "::" + deck.cards.map(function (c) { return c.question + "|" + c.answer; }).join("~");
             const encoded = btoa(unescape(encodeURIComponent(rawString)));
-            navigator.clipboard.writeText(encoded).then(function() { showToast("コピーしました"); }).catch(function() { prompt("以下をコピー:", encoded); });
+            navigator.clipboard.writeText(encoded).then(function () { showToast("コピーしました"); }).catch(function () { prompt("以下をコピー:", encoded); });
         }
 
         function processRawData(encodedData) {
@@ -702,7 +800,7 @@
                 const parts = decoded.split('::');
                 const name = parts[0];
                 const rowsRaw = parts[1];
-                const cards = rowsRaw.split('~').map(function(row) {
+                const cards = rowsRaw.split('~').map(function (row) {
                     const pair = row.split('|');
                     return { question: pair[0], answer: pair[1], mastered: false };
                 });
@@ -723,44 +821,44 @@
 
         function applyDisplayOrder() {
             const deck = decks[currentDeckId];
-            let indices = deck.cards.map(function(_, i) { return i; });
-            if (isUnmasteredOnly) indices = indices.filter(function(i) { return !deck.cards[i].mastered; });
-            if (isShuffleOn) indices.sort(function() { return Math.random() - 0.5; });
+            let indices = deck.cards.map(function (_, i) { return i; });
+            if (isUnmasteredOnly) indices = indices.filter(function (i) { return !deck.cards[i].mastered; });
+            if (isShuffleOn) indices.sort(function () { return Math.random() - 0.5; });
             displayOrder = indices;
             if (currentCardIndex >= displayOrder.length) currentCardIndex = 0;
             updateControlUI();
         }
 
         function renderSlider() {
-                const track = document.getElementById('sliderTrack');
+            const track = document.getElementById('sliderTrack');
 
-                // メモリ解放
-                while (track.firstChild) {
-                    track.removeChild(track.firstChild);
-                }
+            // メモリ解放
+            while (track.firstChild) {
+                track.removeChild(track.firstChild);
+            }
 
-                if (displayOrder.length === 0) {
-                    track.innerHTML = '<div class="card-slot"><div>カードがありません</div></div>';
-                    if (document.getElementById('masteredCountText')) document.getElementById('masteredCountText').textContent = "0 / 0";
-                    return;
-                }
+            if (displayOrder.length === 0) {
+                track.innerHTML = '<div class="card-slot"><div>カードがありません</div></div>';
+                if (document.getElementById('masteredCountText')) document.getElementById('masteredCountText').textContent = "0 / 0";
+                return;
+            }
 
-                // 空のスロットを作成
-                displayOrder.forEach(function (originalIdx, i) {
-                    const slot = document.createElement('div');
-                    slot.className = 'card-slot';
-                    slot.id = `slot-${i}`;
-                    track.appendChild(slot);
-                });
+            // 空のスロットを作成
+            displayOrder.forEach(function (originalIdx, i) {
+                const slot = document.createElement('div');
+                slot.className = 'card-slot';
+                slot.id = `slot-${i}`;
+                track.appendChild(slot);
+            });
 
-                if (typeof updateVisibleCards === "function") {
-                    updateVisibleCards();
-                }
+            if (typeof updateVisibleCards === "function") {
+                updateVisibleCards();
+            }
 
-                updateSlider(false);
+            updateSlider(false);
         }
 
-    // 現在のカードとその前後だけを実体化し、遠くのカードは中身を消す関数
+        // 現在のカードとその前後だけを実体化し、遠くのカードは中身を消す関数
         function updateVisibleCards() {
             const range = 1; // 前後何枚まで保持するか
             displayOrder.forEach(function (originalIdx, i) {
@@ -798,16 +896,16 @@
                     slot.innerHTML = "";
                 }
             });
-        }    
+        }
 
         // --- タッチ・スワイプ・タップ判定 ---
         const viewport = document.getElementById('sliderViewport');
 
-        viewport.addEventListener('touchstart', function(e) {
+        viewport.addEventListener('touchstart', function (e) {
             touchStartX = e.changedTouches[0].screenX;
         }, false);
 
-        viewport.addEventListener('touchend', function(e) {
+        viewport.addEventListener('touchend', function (e) {
             touchEndX = e.changedTouches[0].screenX;
             handleSwipe();
         }, false);
@@ -828,9 +926,9 @@
             }
         }
 
-        viewport.addEventListener('click', function(e) {
+        viewport.addEventListener('click', function (e) {
             if (isTransitioning || displayOrder.length === 0) return;
-            
+
             // スワイプ直後の誤タップを防ぐ（指が動いていれば無視）
             if (Math.abs(touchEndX - touchStartX) > 10) return;
 
@@ -843,53 +941,53 @@
         });
 
         function updateSlider(animate) {
-                isTransitioning = true;
-                const track = document.getElementById('sliderTrack');
+            isTransitioning = true;
+            const track = document.getElementById('sliderTrack');
 
-                // 移動する前に、移動先のカードを実体化させる
-                if (typeof updateVisibleCards === "function") {
-                    updateVisibleCards();
-                }
+            // 移動する前に、移動先のカードを実体化させる
+            if (typeof updateVisibleCards === "function") {
+                updateVisibleCards();
+            }
 
-                track.style.transition = animate === false ? "none" : "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-                track.style.transform = "translateX(-" + (currentCardIndex * 100) + "%)";
+            track.style.transition = animate === false ? "none" : "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+            track.style.transform = "translateX(-" + (currentCardIndex * 100) + "%)";
 
-                setTimeout(function () {
-                    isTransitioning = false;
-                }, 500);
+            setTimeout(function () {
+                isTransitioning = false;
+            }, 500);
 
-                updateCardInfo();
+            updateCardInfo();
         }
 
         function nextCard() {
-                if (currentCardIndex < displayOrder.length - 1) {
-                    // まだ次のカードがある場合
-                    currentCardIndex++;
-                    updateSlider(true);
-                } else {
-                    // 最後のカードに到達した場合
-                    if (isRepeatOn) {
-                        // --- 【Version 1.5: 習得状況を再チェック】 ---
-                        // リピートする瞬間に、現在の「未習得のみ」等の条件でリストを更新する
-                        applyDisplayOrder();
+            if (currentCardIndex < displayOrder.length - 1) {
+                // まだ次のカードがある場合
+                currentCardIndex++;
+                updateSlider(true);
+            } else {
+                // 最後のカードに到達した場合
+                if (isRepeatOn) {
+                    // --- 【Version 1.5: 習得状況を再チェック】 ---
+                    // リピートする瞬間に、現在の「未習得のみ」等の条件でリストを更新する
+                    applyDisplayOrder();
 
-                        // リスト更新後、まだカードが残っているか確認
-                        if (displayOrder.length > 0) {
-                            currentCardIndex = 0;
-                            // スライダーを再描画（リストの中身が変わっている可能性があるため）
-                            renderSlider();
-                            showToast("未習得のみでリピートします");
-                        } else {
-                            // すべて習得済みになってしまった場合
-                            closeFlashcards();
-                            showToast("すべて習得しました！お疲れ様でした");
-                        }
+                    // リスト更新後、まだカードが残っているか確認
+                    if (displayOrder.length > 0) {
+                        currentCardIndex = 0;
+                        // スライダーを再描画（リストの中身が変わっている可能性があるため）
+                        renderSlider();
+                        showToast("未習得のみでリピートします");
                     } else {
-                        // リピートOFFなら終了（既存の処理があればここに）
-                        showToast("全カード終了しました");
+                        // すべて習得済みになってしまった場合
+                        closeFlashcards();
+                        showToast("すべて習得しました！お疲れ様でした");
                     }
+                } else {
+                    // リピートOFFなら終了（既存の処理があればここに）
+                    showToast("全カード終了しました");
                 }
             }
+        }
 
         function prevCard() {
             if (currentCardIndex > 0) {
@@ -904,7 +1002,7 @@
             inner.style.transform = inner.style.transform.includes('180deg') ? 'rotateY(0deg)' : 'rotateY(180deg)';
         }
 
-       function updateCardInfo() {
+        function updateCardInfo() {
             if (displayOrder.length === 0) return;
             const deck = decks[currentDeckId];
             const card = deck.cards[displayOrder[currentCardIndex]];
@@ -965,56 +1063,56 @@
 
         // お気に入りの切り替え
         function toggleFavorite() {
-                if (displayOrder.length === 0) return;
+            if (displayOrder.length === 0) return;
 
-                const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
+            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
 
-                // お気に入り状態を反転
-                card.favorite = !card.favorite;
+            // お気に入り状態を反転
+            card.favorite = !card.favorite;
 
-                // --- 元のデッキへ同期させる処理 ---
-                if (currentDeckId === "FAVORITE_MODE" && card._originalDeckId) {
-                    const originDeck = decks[card._originalDeckId];
-                    if (originDeck && originDeck.cards[card._originalIndex]) {
-                        originDeck.cards[card._originalIndex].favorite = card.favorite;
-                    }
+            // --- 元のデッキへ同期させる処理 ---
+            if (currentDeckId === "FAVORITE_MODE" && card._originalDeckId) {
+                const originDeck = decks[card._originalDeckId];
+                if (originDeck && originDeck.cards[card._originalIndex]) {
+                    originDeck.cards[card._originalIndex].favorite = card.favorite;
                 }
+            }
 
-                saveToLocal();
-                updateCardInfo(); // 星の塗りつぶし更新
-                renderDecks();    // メイン画面の枚数表示を更新
-                showToast(card.favorite ? "★ お気に入り" : "☆ 解除");
+            saveToLocal();
+            updateCardInfo(); // 星の塗りつぶし更新
+            renderDecks();    // メイン画面の枚数表示を更新
+            showToast(card.favorite ? "★ お気に入り" : "☆ 解除");
         }
 
         async function toggleMastered() {
-                if (displayOrder.length === 0 || isTransitioning) return;
+            if (displayOrder.length === 0 || isTransitioning) return;
 
-                const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
+            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
 
-                // 状態を反転させる
-                card.mastered = !card.mastered;
+            // 状態を反転させる
+            card.mastered = !card.mastered;
 
-                // --- 元のデッキへ同期させる処理 ---
-                if (currentDeckId === "FAVORITE_MODE" && card._originalDeckId) {
-                    const originDeck = decks[card._originalDeckId];
-                    if (originDeck && originDeck.cards[card._originalIndex]) {
-                        originDeck.cards[card._originalIndex].mastered = card.mastered;
-                    }
+            // --- 元のデッキへ同期させる処理 ---
+            if (currentDeckId === "FAVORITE_MODE" && card._originalDeckId) {
+                const originDeck = decks[card._originalDeckId];
+                if (originDeck && originDeck.cards[card._originalIndex]) {
+                    originDeck.cards[card._originalIndex].mastered = card.mastered;
                 }
+            }
 
-                // 1. まず画面上の表示（色やテキスト）を即座に更新する
-                saveToLocal();
-                updateCardInfo();
-                renderDecks(); // メイン画面の進捗も更新
+            // 1. まず画面上の表示（色やテキスト）を即座に更新する
+            saveToLocal();
+            updateCardInfo();
+            renderDecks(); // メイン画面の進捗も更新
 
-                // 2. 「習得済み」にした場合のみ、少し待ってから自動で次へ
-                if (card.mastered) {
-                    isTransitioning = true;
-                    // 0.5秒待機
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    isTransitioning = false;
-                    nextCard(); // 自動で次のカードへ
-                }
+            // 2. 「習得済み」にした場合のみ、少し待ってから自動で次へ
+            if (card.mastered) {
+                isTransitioning = true;
+                // 0.5秒待機
+                await new Promise(resolve => setTimeout(resolve, 300));
+                isTransitioning = false;
+                nextCard(); // 自動で次のカードへ
+            }
         }
         function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); renderSlider(); }
         function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); renderSlider(); }
@@ -1033,109 +1131,109 @@
         }
         // 【修正後】
         function renderBulkList() {
-                const list = document.getElementById('bulkList');
-                const searchTerm = document.getElementById('cardSearch').value.toLowerCase();
-                list.innerHTML = '';
+            const list = document.getElementById('bulkList');
+            const searchTerm = document.getElementById('cardSearch').value.toLowerCase();
+            list.innerHTML = '';
 
-                decks[currentDeckId].cards.forEach((card, originalIdx) => {
-                    if (card.question.toLowerCase().includes(searchTerm) || card.answer.toLowerCase().includes(searchTerm)) {
-                        const row = document.createElement('div');
-                        row.className = 'bulk-row';
+            decks[currentDeckId].cards.forEach((card, originalIdx) => {
+                if (card.question.toLowerCase().includes(searchTerm) || card.answer.toLowerCase().includes(searchTerm)) {
+                    const row = document.createElement('div');
+                    row.className = 'bulk-row';
 
-                        // レイアウトを「問題・答え・コメント」の3列にするために grid を調整
-                        row.style.gridTemplateColumns = "1fr 1fr 1fr 45px";
+                    // レイアウトを「問題・答え・コメント」の3列にするために grid を調整
+                    row.style.gridTemplateColumns = "1fr 1fr 1fr 45px";
 
-                        row.innerHTML = `
+                    row.innerHTML = `
                 <input type="text" value="${card.question}" class="bulk-input q" placeholder="問題">
                 <input type="text" value="${card.answer}" class="bulk-input a" placeholder="答え">
                 <input type="text" value="${card.comment || ''}" class="bulk-input c" placeholder="コメント">
                 <button class="btn btn-danger" onclick="removeBulkCard(${originalIdx})">×</button>
             `;
-                        list.appendChild(row);
-                    }
-                });
+                    list.appendChild(row);
+                }
+            });
         }
 
         function addCard() {
-                const q = document.getElementById('newQ').value.trim();
-                const a = document.getElementById('newA').value.trim();
-                const c = document.getElementById('newC').value.trim(); // 追加：コメントを取得
+            const q = document.getElementById('newQ').value.trim();
+            const a = document.getElementById('newA').value.trim();
+            const c = document.getElementById('newC').value.trim(); // 追加：コメントを取得
 
-                if (q && a) {
-                    decks[currentDeckId].cards.push({
-                        question: q,
-                        answer: a,
-                        comment: c, // 追加：データに保存
-                        mastered: false,
-                        favorite: false // 追加：初期値として設定
-                    });
+            if (q && a) {
+                decks[currentDeckId].cards.push({
+                    question: q,
+                    answer: a,
+                    comment: c, // 追加：データに保存
+                    mastered: false,
+                    favorite: false // 追加：初期値として設定
+                });
 
-                    // 入力欄をすべて空にする
-                    document.getElementById('newQ').value = '';
-                    document.getElementById('newA').value = '';
-                    document.getElementById('newC').value = ''; // 追加：コメント欄も空に
+                // 入力欄をすべて空にする
+                document.getElementById('newQ').value = '';
+                document.getElementById('newA').value = '';
+                document.getElementById('newC').value = ''; // 追加：コメント欄も空に
 
-                    renderBulkList(); // リストを再描画
-                }
+                renderBulkList(); // リストを再描画
+            }
         }
 
         function saveBulkChanges() {
-                // 1. セレクタを修正してコメント欄(.c)も取得するようにする
-                const qs = document.querySelectorAll('.bulk-input.q');
-                const as = document.querySelectorAll('.bulk-input.a');
-                const cs = document.querySelectorAll('.bulk-input.c'); // 追加
+            // 1. セレクタを修正してコメント欄(.c)も取得するようにする
+            const qs = document.querySelectorAll('.bulk-input.q');
+            const as = document.querySelectorAll('.bulk-input.a');
+            const cs = document.querySelectorAll('.bulk-input.c'); // 追加
 
-                const updated = [];
-                const oldCards = decks[currentDeckId].cards; // 元のデータを参照用にとる
+            const updated = [];
+            const oldCards = decks[currentDeckId].cards; // 元のデータを参照用にとる
 
-                qs.forEach(function (q, i) {
-                    if (q.value.trim()) {
-                        updated.push({
-                            question: q.value.trim(),
-                            answer: as[i].value.trim(),
-                            // コメントを保存（入力がなければ空文字）
-                            comment: cs[i] ? cs[i].value.trim() : (oldCards[i]?.comment || ""),
-                            // 既存のカードがある場合は、習得状況とお気に入りを引き継ぐ
-                            mastered: oldCards[i] ? oldCards[i].mastered : false,
-                            favorite: oldCards[i] ? oldCards[i].favorite : false
-                        });
-                    }
-                });
+            qs.forEach(function (q, i) {
+                if (q.value.trim()) {
+                    updated.push({
+                        question: q.value.trim(),
+                        answer: as[i].value.trim(),
+                        // コメントを保存（入力がなければ空文字）
+                        comment: cs[i] ? cs[i].value.trim() : (oldCards[i]?.comment || ""),
+                        // 既存のカードがある場合は、習得状況とお気に入りを引き継ぐ
+                        mastered: oldCards[i] ? oldCards[i].mastered : false,
+                        favorite: oldCards[i] ? oldCards[i].favorite : false
+                    });
+                }
+            });
 
-                decks[currentDeckId].cards = updated;
-                saveToLocal();
-                renderDecks();
-                applyDisplayOrder();
-                renderSlider();
-                toggleBulkEdit();
-                showToast("保存完了");
+            decks[currentDeckId].cards = updated;
+            saveToLocal();
+            renderDecks();
+            applyDisplayOrder();
+            renderSlider();
+            toggleBulkEdit();
+            showToast("保存完了");
         }
 
         // --- 外部連携 ---
-        
+
 
         // --- QRコード表示のメイン処理 ---
         function showQR() {
-    // 1. 現在のデッキデータを取得
+            // 1. 現在のデッキデータを取得
             const deck = decks[currentDeckId];
             if (!deck || deck.cards.length === 0) {
                 showToast("データがないためQRを作成できません");
                 return;
             }
 
-    // 2. データを文字列化 (名前::問題1|答え1~問題2|答え2...)
-            const rawString = deck.name + "::" + deck.cards.map(function(c) {
+            // 2. データを文字列化 (名前::問題1|答え1~問題2|答え2...)
+            const rawString = deck.name + "::" + deck.cards.map(function (c) {
                 return c.question + "|" + c.answer;
             }).join("~");
 
-    // 3. Base64エンコード (日本語対応のためunescape/encodeURIComponentを使用)
+            // 3. Base64エンコード (日本語対応のためunescape/encodeURIComponentを使用)
             const encodedData = btoa(unescape(encodeURIComponent(rawString)));
 
-    // 4. 表示用コンテナを取得して中身をクリア
+            // 4. 表示用コンテナを取得して中身をクリア
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = "";
 
-    // 5. ライブラリを使用してQR生成
+            // 5. ライブラリを使用してQR生成
             try {
                 new QRCode(qrContainer, {
                     text: encodedData,
@@ -1146,7 +1244,7 @@
                     correctLevel: QRCode.CorrectLevel.H
                 });
 
-        // 6. モーダルを表示
+                // 6. モーダルを表示
                 document.getElementById('qrDisplayModal').style.display = 'flex';
             } catch (err) {
                 console.error("QR生成エラー:", err);
@@ -1177,10 +1275,10 @@
 
         function showToast(msg) {
             const t = document.getElementById("toast"); t.textContent = msg; t.className = "show";
-            setTimeout(function() { t.className = ""; }, 2000);
+            setTimeout(function () { t.className = ""; }, 2000);
         }
 
-        window.addEventListener('keydown', function(e) {
+        window.addEventListener('keydown', function (e) {
             if (document.getElementById('flashcardModal').style.display !== 'flex') return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             const key = e.key.toLowerCase();
@@ -1199,7 +1297,7 @@
         function toggleRepeat() {
             isRepeatOn = !isRepeatOn;
             const btn = document.getElementById('repeatBtn');
-            if(btn) {
+            if (btn) {
                 btn.textContent = isRepeatOn ? "🔁 リピート: ON" : "🔁 リピート: OFF";
                 btn.className = isRepeatOn ? "btn btn-active" : "btn btn-outline";
             }
@@ -1220,14 +1318,14 @@
                 default: // 標準の紫
                     bgValue = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
             }
-    // body要素にカスタムプロパティをセット
+            // body要素にカスタムプロパティをセット
             document.body.style.setProperty('--theme-bg', bgValue);
-    
-    // お好みで：テーマ設定を保存する場合
+
+            // お好みで：テーマ設定を保存する場合
             localStorage.setItem('selected_theme', themeName);
         }
 
-// ページ読み込み時に保存されたテーマを適用
+        // ページ読み込み時に保存されたテーマを適用
         window.addEventListener('DOMContentLoaded', () => {
             const savedTheme = localStorage.getItem('selected_theme');
             if (savedTheme) setTheme(savedTheme);
@@ -1236,21 +1334,21 @@
         // 全データをJSONファイルとしてダウンロード（保存）
         function exportAllData() {
             const data = JSON.stringify(decks, null, 2);
-            const blob = new Blob([data], {type: 'application/json'});
+            const blob = new Blob([data], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `flashcards_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `flashcards_backup_${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             showToast("ファイルを保存しました");
         }
 
-// JSONファイルを読み込んでデータを復元
+        // JSONファイルを読み込んでデータを復元
         function importAllData(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     const importedDecks = JSON.parse(e.target.result);
                     if (confirm("現在のデータがすべて上書きされます。復元してもよろしいですか？")) {
@@ -1266,11 +1364,11 @@
             reader.readAsText(file);
             event.target.value = ''; // 選択をリセット
         }
-        
+
         function toggleCredit() {
             const content = document.getElementById('creditContent');
             const toggle = document.querySelector('.credit-toggle');
-    
+
             if (content.style.display === 'block') {
                 content.style.display = 'none';
                 toggle.textContent = '© クレジットを表示';
@@ -1293,7 +1391,7 @@
                     const sheet = workbook.Sheets[sheetName];
                     const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-            // A列に問題、B列に答えがあるデータを抽出
+                    // A列に問題、B列に答えがあるデータを抽出
                     const cards = json
                         .filter(row => row[0] && row[1]) // A列とB列に値がある行のみ
                         .map(row => ({
@@ -1305,7 +1403,7 @@
                         }));
 
                     if (cards.length > 0) {
-                // ファイル名（拡張子抜き）をデッキ名にする
+                        // ファイル名（拡張子抜き）をデッキ名にする
                         const deckName = file.name.replace(/\.[^/.]+$/, "");
                         // 1. まず同じ名前のデッキが既に存在するか確認する
                         let id = Object.keys(decks).find(key => decks[key].name === deckName);
@@ -1314,7 +1412,7 @@
                         if (!id) {
                             id = (Date.now() + Math.random()).toString();
                         }
-                
+
                         decks[id] = {
                             name: deckName,
                             cards: cards
@@ -1332,41 +1430,42 @@
         }
 
         function openFavoriteDeck() {
-                // 1. 全デッキからお気に入りカードだけを収集
-                let favCards = [];
-                Object.keys(decks).forEach(deckId => {
-                    decks[deckId].cards.forEach((card, index) => {
-                        if (card.favorite) {
-                            // 学習画面で元のデッキを更新できるように情報を付与
-                            favCards.push({
-                                ...card,
-                                _originalDeckId: deckId,
-                                _originalIndex: index
-                            });
-                        }
-                    });
+            // 1. 全デッキからお気に入りカードだけを収集
+            let favCards = [];
+            Object.keys(decks).forEach(deckId => {
+                decks[deckId].cards.forEach((card, index) => {
+                    if (card.favorite) {
+                        // 学習画面で元のデッキを更新できるように情報を付与
+                        favCards.push({
+                            ...card,
+                            _originalDeckId: deckId,
+                            _originalIndex: index
+                        });
+                    }
                 });
+            });
 
-                if (favCards.length === 0) return;
+            if (favCards.length === 0) return;
 
-                // 2. 学習用の変数をお気に入り専用にセット
-                currentDeckId = "FAVORITE_MODE"; // 特殊なID
+            // 2. 学習用の変数をお気に入り専用にセット
+            currentDeckId = "FAVORITE_MODE"; // 特殊なID
 
-                // 一時的な「お気に入りデッキ」構造を作成
-                const tempDeck = {
-                    name: "お気に入りカード",
-                    cards: favCards
-                };
+            // 一時的な「お気に入りデッキ」構造を作成
+            const tempDeck = {
+                name: "お気に入りカード",
+                cards: favCards
+            };
 
-                // グローバルな decks オブジェクトに一時的に登録（既存の openDeck 処理を流用するため）
-                decks["FAVORITE_MODE"] = tempDeck;
+            // グローバルな decks オブジェクトに一時的に登録（既存の openDeck 処理を流用するため）
+            decks["FAVORITE_MODE"] = tempDeck;
 
-                // 3. 学習画面を開く（既存の openDeck 関数を呼び出し）
-                openDeck("FAVORITE_MODE");
+            // 3. 学習画面を開く（既存の openDeck 関数を呼び出し）
+            openDeck("FAVORITE_MODE");
 
-                // 4. 学習画面のタイトルを調整
-                document.getElementById('modalTitle').textContent = "🌟 お気に入り学習";
+            // 4. 学習画面のタイトルを調整
+            document.getElementById('modalTitle').textContent = "🌟 お気に入り学習";
         }
     </script>
 </body>
+
 </html>
