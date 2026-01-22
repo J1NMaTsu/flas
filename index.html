@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
-    <title>フラッシュカード Pro完全版</title>
+    <title>フラッシュカード Pro完全版（スワイプ対応）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -16,16 +16,20 @@
             touch-action: pan-y; /* スワイプ判定のため縦方向のみ許可 */
         }
         
+        /* bodyの背景をテーマ変数に変更 */
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--theme-bg, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
             min-height: 100vh;
             padding: 15px;
             display: flex;
             flex-direction: column;
             color: #333;
-            overflow-x: hidden;
+            transition: background 0.5s ease; /* 切り替えをなめらかに */
         }
+
+/* ヘッダーの背景も連動 */
+
 
         /* メインコンテナ */
         .container {
@@ -42,7 +46,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--theme-bg, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
             color: white;
             padding: 25px 20px;
             text-align: center;
@@ -320,6 +324,47 @@
             flex-direction: column;
             padding: 20px;
         }
+        /* 円グラフのスタイル */
+        .progress-container { display: flex; align-items: center; }
+        .progress-circle { transform: rotate(-90deg); }
+        .progress-circle circle { fill: none; stroke-width: 4; }
+        .progress-circle .bg { stroke: #e2e8f0; }
+        .progress-circle .fg {
+            stroke: #667eea;
+            stroke-dasharray: 100; /* 2 * PI * r (16) ≒ 100 */
+            stroke-dashoffset: 100;
+            transition: stroke-dashoffset 0.3s;
+        }
+
+/* 下部の進行状況バー */
+        .linear-progress-wrapper { width: 100%; height: 6px; background: #e2e8f0; position: relative; }
+        .linear-progress-bar { 
+            height: 100%; width: 0%; background: #667eea; 
+            transition: width 0.3s ease; 
+        }
+
+        .credit-container {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .credit-content {
+            display: none; /* 最初は隠す */
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .credit-toggle {
+            cursor: pointer;
+            text-decoration: underline;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -327,29 +372,61 @@
     <div class="container">
         <div class="header">
             <h1>🃏 フラッシュカード Pro</h1>
-            <p>効率的な学習のための完全版 v26.1.22.141.2</p>
+            <div style="text-align: center; margin-bottom: 15px; display: flex; justify-content: center; gap: 8px;">
+                <button onclick="setTheme('default')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('sunset')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #ff9a9e, #fad0c4); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('ocean')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #4facfe, #00f2fe); border: 2px solid white; cursor: pointer;"></button>
+                <button onclick="setTheme('forest')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
+            </div>
+            
+            <p>効率的な学習のための完全版 v26.1.22.141.qr</p>
         </div>
 
         <div class="content">
             <div class="action-area">
                 <div class="upload-section">
-                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" multiple onchange="importExcelFiles(event)">
                     <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('fileInput').click()">📁 Excelから読み込み</button>
                     <p>A列に問題、B列に答えを入力したファイルを読み込めます</p>
                 </div>
-                <button class="btn btn-success" onclick="createNewDeck()">➕ 新規デッキ</button>
+                <div style="grid-column: span 2; display: flex; gap: 8px;">
+                    <button class="btn btn-success" style="flex: 1;" onclick="createNewDeck()">➕ 新規デッキ</button>
+                    <button class="btn btn-outline" onclick="exportAllData()" title="保存">📤</button>
+                    <button class="btn btn-outline" onclick="document.getElementById('importFile').click()" title="復元">📥</button>
+                    <input type="file" id="importFile" style="display:none" accept=".json" onchange="importAllData(event)">
+                </div>
+
                 <button class="btn btn-outline" onclick="importFromText()">📝 テキスト読込</button>
                 <button class="btn btn-outline" onclick="startCamera()" style="grid-column: span 2;">📷 QRコード読込</button>
             </div>
 
             <div id="deckItems">
                 </div>
+
+                <div class="credit-container">
+                    <span class="credit-toggle" onclick="toggleCredit()">© クレジットを表示</span>
+                    <div id="creditContent" class="credit-content">
+                        制作:松崎仁<br>
+                        協力:Gemini chat-gpt claude<br>
+                        共同開発:森本明日翔　越田道秀<br>
+                        Version: 26.1.22<br>
+                        <small>Powered by Gemini & GitHub Community</small>
+                    </div>
+                </div>
         </div>
     </div>
 
     <div class="flashcard-modal" id="flashcardModal">
         <div class="modal-header">
-            <div id="flashcardProgress" class="focus-hide" style="font-weight:bold; color:#667eea;"></div>
+            <div class="progress-container focus-hide" style="display: flex; align-items: center; position: relative;">
+                <svg class="progress-circle" width="50" height="50">
+                    <circle class="bg" cx="25" cy="25" r="20" style="fill:none; stroke:#e2e8f0; stroke-width:4;"></circle>
+                    <circle class="fg" id="progressCircle" cx="25" cy="25" r="20" style="fill:none; stroke:#667eea; stroke-width:4; stroke-dasharray:126; stroke-dashoffset:126; transition:stroke-dashoffset 0.3s; transform: rotate(-90deg); transform-origin: center;"></circle>
+                </svg>
+                <div id="progressPercentText" style="position: absolute; width: 50px; text-align: center; font-size: 0.7rem; font-weight: bold; color: #667eea; pointer-events: none;">0%</div>
+                <span id="masteredCountText" style="font-weight:bold; color:#667eea; margin-left:8px; font-size:0.9rem;">0/0</span>
+            </div>
+
             <div style="display:flex; gap:8px;">
                 <button id="focusModeBtn" class="btn btn-outline" onclick="toggleFocusMode()">👁️</button>
                 <button class="btn btn-outline focus-hide" onclick="showQR()">📤 QR</button>
@@ -358,9 +435,12 @@
             </div>
         </div>
 
+        <div style="width:100%; height:6px; background:#e2e8f0;">
+            <div id="linearProgressBar" style="height:100%; width:0%; background:#667eea; transition:width 0.3s ease;"></div>
+        </div>
+
         <div class="slider-viewport" id="sliderViewport">
-            <div class="slider-track" id="sliderTrack">
-                </div>
+            <div class="slider-track" id="sliderTrack"></div>
         </div>
 
         <div class="control-bar" id="controlBar">
@@ -371,13 +451,19 @@
                 <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀 シャッフル</button>
                 <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯 未習得のみ</button>
                 <button class="btn btn-outline" onclick="toggleBulkEdit()">📝 編集</button>
+                <button id="repeatBtn" class="btn btn-outline" onclick="toggleRepeat()">🔁 リピート: OFF</button>
             </div>
         </div>
     </div>
 
     <div id="bulkEditMode" class="bulk-edit-area">
         <h2 style="margin-bottom:20px;">カードリストの編集</h2>
-        <div class="bulk-list" id="bulkList"></div>
+
+<div style="margin-bottom: 10px; width: 100%;">
+    <input type="text" id="cardSearch" placeholder="🔍 カードを検索..." oninput="renderBulkList()" 
+           style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box;">
+</div>
+<div class="bulk-list" id="bulkList"></div>
         
         <div style="background:#f7fafc; padding:20px; border-radius:15px; margin-bottom:20px; border: 1px solid #e2e8f0;">
             <p style="margin-bottom:10px; font-weight:bold;">新しいカードを追加</p>
@@ -405,6 +491,7 @@
     <div id="toast"></div>
 
     <script>
+        let isRepeatOn = false;
         // --- データ管理変数の初期化 ---
         let decks = {};
         let currentDeckId = null;
@@ -539,7 +626,7 @@
             track.innerHTML = '';
             if (displayOrder.length === 0) {
                 track.innerHTML = '<div class="card-slot"><div>カードがありません</div></div>';
-                document.getElementById('flashcardProgress').textContent = "0 / 0";
+                if(document.getElementById('masteredCountText')) document.getElementById('masteredCountText').textContent = "0 / 0";
                 return;
             }
             displayOrder.forEach(function(originalIdx, i) {
@@ -618,10 +705,24 @@
 
         function nextCard() {
             if (currentCardIndex < displayOrder.length - 1) {
+        // まだ次のカードがある場合
                 currentCardIndex++;
                 updateSlider(true);
             } else {
-                showToast("最後のカードです");
+        // 最後のカードに到達した場合
+                if (isRepeatOn) {
+            // 【重要】リピートONの時：インデックスを0に戻してスライダーを更新
+                    currentCardIndex = 0; 
+            
+            // アニメーションなしで一瞬で戻すか、アニメーションありで戻すか選べます
+            // updateSlider(true) なら右から左へシャーッと戻ります
+                    updateSlider(true); 
+            
+                    showToast("最初からリピートします");
+                } else {
+            // リピートOFFなら終了画面を表示
+                    document.getElementById('finishOverlay').style.display = 'flex';
+                }
             }
         }
 
@@ -640,8 +741,32 @@
 
         function updateCardInfo() {
             if (displayOrder.length === 0) return;
-            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
-            document.getElementById('flashcardProgress').textContent = (currentCardIndex + 1) + " / " + displayOrder.length;
+            const deck = decks[currentDeckId];
+            const card = deck.cards[displayOrder[currentCardIndex]];
+    
+    // 習得状況の計算
+            const masteredCount = deck.cards.filter(function(c) { return c.mastered; }).length;
+            const totalCount = deck.cards.length;
+            const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+
+    // 1. 円グラフとテキストの更新
+            document.getElementById('masteredCountText').textContent = masteredCount + " / " + totalCount;
+            document.getElementById('progressPercentText').textContent = percent + "%";
+    
+    // 円グラフの計算 (半径20の場合 dasharrayは約126)
+            const dashArray = 126;
+            const offset = dashArray - (percent / 100 * dashArray);
+            const circle = document.getElementById('progressCircle');
+            if(circle) {
+                circle.style.strokeDashoffset = offset;
+            }
+
+    // 2. 下部の進行バーの更新（何枚目か）
+            const progressPercent = ((currentCardIndex + 1) / displayOrder.length) * 100;
+            const bar = document.getElementById('linearProgressBar');
+            if(bar) bar.style.width = progressPercent + "%";
+
+    // 3. ボタン表示の更新
             const mBtn = document.getElementById('masteredBtn');
             mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
             mBtn.className = card.mastered ? 'btn btn-success' : 'btn btn-outline';
@@ -671,14 +796,32 @@
         }
         function renderBulkList() {
             const container = document.getElementById('bulkList');
+    // 検索窓に入力された文字を取得
+            const searchInput = document.getElementById('cardSearch');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+    
             container.innerHTML = '';
-            decks[currentDeckId].cards.forEach(function(card) {
-                const row = document.createElement('div');
-                row.className = 'bulk-row';
-                row.innerHTML = `<input type="text" class="bulk-input q" value="${card.question}"><input type="text" class="bulk-input a" value="${card.answer}"><button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>`;
-                container.appendChild(row);
+    
+    // 現在のデッキ内のカードをループして表示
+            decks[currentDeckId].cards.forEach(function(card, index) {
+        // 問題か答えに検索文字が含まれているかチェック
+                const isMatch = card.question.toLowerCase().includes(searchTerm) || 
+                                card.answer.toLowerCase().includes(searchTerm);
+        
+        // 一致する場合のみ表示（検索窓が空なら全部表示されます）
+                if (isMatch) {
+                    const row = document.createElement('div');
+                    row.className = 'bulk-row';
+                    row.innerHTML = `
+                        <input type="text" class="bulk-input q" value="${card.question}">
+                        <input type="text" class="bulk-input a" value="${card.answer}">
+                        <button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
+                    `;
+                    container.appendChild(row);
+                }
             });
         }
+
         function addCard() {
             const q = document.getElementById('newQ'), a = document.getElementById('newA');
             if (q.value.trim() && a.value.trim()) {
@@ -697,20 +840,7 @@
         }
 
         // --- 外部連携 ---
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                const data = new Uint8Array(ev.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
-                const cards = rows.filter(r => r[0] && r[1]).map(r => ({ question: String(r[0]), answer: String(r[1]), mastered: false }));
-                const id = Date.now().toString();
-                decks[id] = { name: file.name.split('.')[0], cards: cards };
-                saveToLocal(); renderDecks(); showToast("Excel読込完了");
-            };
-            reader.readAsArrayBuffer(file);
-        });
+        
 
         // --- QRコード表示のメイン処理 ---
         function showQR() {
@@ -787,7 +917,140 @@
             else if (key === 'arrowleft') prevCard();
             else if (key === 'm') toggleMastered();
         });
+
+        function restartDeck() {
+            currentCardIndex = 0;
+            document.getElementById('finishOverlay').style.display = 'none';
+            updateSlider(true);
+        }
+
+        function toggleRepeat() {
+            isRepeatOn = !isRepeatOn;
+            const btn = document.getElementById('repeatBtn');
+            if(btn) {
+                btn.textContent = isRepeatOn ? "🔁 リピート: ON" : "🔁 リピート: OFF";
+                btn.className = isRepeatOn ? "btn btn-active" : "btn btn-outline";
+            }
+        }
+        // テーマ設定用の関数
+        function setTheme(themeName) {
+            let bgValue = "";
+            switch (themeName) {
+                case 'sunset':
+                    bgValue = "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)";
+                    break;
+                case 'ocean':
+                    bgValue = "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)";
+                    break;
+                case 'forest':
+                    bgValue = "linear-gradient(135deg, #66bb6a 0%, #43a047 100%)";
+                    break;
+                default: // 標準の紫
+                    bgValue = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+            }
+    // body要素にカスタムプロパティをセット
+            document.body.style.setProperty('--theme-bg', bgValue);
+    
+    // お好みで：テーマ設定を保存する場合
+            localStorage.setItem('selected_theme', themeName);
+        }
+
+// ページ読み込み時に保存されたテーマを適用
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('selected_theme');
+            if (savedTheme) setTheme(savedTheme);
+        });
+
+        // 全データをJSONファイルとしてダウンロード（保存）
+        function exportAllData() {
+            const data = JSON.stringify(decks, null, 2);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `flashcards_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            showToast("ファイルを保存しました");
+        }
+
+// JSONファイルを読み込んでデータを復元
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedDecks = JSON.parse(e.target.result);
+                    if (confirm("現在のデータがすべて上書きされます。復元してもよろしいですか？")) {
+                        decks = importedDecks;
+                        saveToLocal();
+                        renderDecks();
+                        showToast("データを復元しました");
+                    }
+                } catch (err) {
+                    alert("エラー: 正しいバックアップファイルを選択してください");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 選択をリセット
+        }
+        
+        function toggleCredit() {
+            const content = document.getElementById('creditContent');
+            const toggle = document.querySelector('.credit-toggle');
+    
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                toggle.textContent = '© クレジットを表示';
+            } else {
+                content.style.display = 'block';
+                toggle.textContent = '© クレジットを閉じる';
+            }
+        }
+
+        // Excel複数ファイル読み込み
+        async function importExcelFiles(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            for (let file of files) {
+                try {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data);
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+            // A列に問題、B列に答えがあるデータを抽出
+                    const cards = json
+                        .filter(row => row[0] && row[1]) // 両方の列に値がある行のみ
+                        .map(row => ({
+                            question: String(row[0]).trim(),
+                            answer: String(row[1]).trim(),
+                            mastered: false
+                        }));
+
+                    if (cards.length > 0) {
+                // ファイル名（拡張子抜き）をデッキ名にする
+                        const deckName = file.name.replace(/\.[^/.]+$/, "");
+                        const id = (Date.now() + Math.random()).toString(); // IDの重複防止
+                
+                        decks[id] = {
+                            name: deckName,
+                            cards: cards
+                        };
+                    }
+                } catch (e) {
+                    console.error(file.name + " の読み込みに失敗しました:", e);
+                }
+            }
+
+            saveToLocal();
+            renderDecks();
+            showToast(files.length + " 件のファイルを処理しました");
+            event.target.value = ''; // 選択をリセット
+        }
+
     </script>
 </body>
 </html>
-
