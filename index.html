@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#667eea">
-    <title>フラッシュカード Pro完全版</title>
+    <title>フラッシュカード Pro完全版（スワイプ対応）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -429,7 +429,7 @@
                 <button onclick="setTheme('forest')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
             
-            <p>効率的な学習のための完全版 v26.1.22.1845</p>
+            <p>効率的な学習のための完全版 v26.1.22.141.qr</p>
         </div>
 
         <div class="content">
@@ -497,8 +497,17 @@
         </div>
 
         <div class="control-bar" id="controlBar">
-            <div class="focus-hide" style="text-align:center;">
-                <button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:400px;" onclick="toggleMastered()">⬜ まだ習得していない</button>
+            <div class="focus-hide" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
+                <button id="favoriteBtn" class="btn btn-outline"
+                    style="width: 50px; height: 50px; padding: 0; font-size: 24px; border-color: #ffcc00; color: #ffcc00; flex-shrink: 0;"
+                    onclick="toggleFavorite()">
+                    ☆
+                </button>
+            
+                <button id="masteredBtn" class="btn btn-outline" style="flex-grow: 1; max-width: 340px; height: 50px;"
+                    onclick="toggleMastered()">
+                    ⬜ まだ習得していない
+                </button>
             </div>
             <div class="focus-hide" style="display:flex; justify-content:center; gap:12px; margin-top:10px;">
                 <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀</button>
@@ -522,6 +531,7 @@
             <p style="margin-bottom:10px; font-weight:bold;">新しいカードを追加</p>
             <input type="text" id="newQ" placeholder="問題を入力" class="bulk-input" style="margin-bottom:10px;">
             <input type="text" id="newA" placeholder="答えを入力" class="bulk-input" style="margin-bottom:10px;">
+            <input type="text" id="newC" placeholder="コメントを入力（任意）" class="bulk-input" style="margin-bottom:10px;">
             <button class="btn btn-success" style="width:100%" onclick="addCard()">➕ リストに追加</button>
         </div>
 
@@ -578,30 +588,72 @@
 
         // --- メイン画面の処理 ---
         function renderDecks() {
-            const container = document.getElementById('deckItems');
-            container.innerHTML = '';
-            const keys = Object.keys(decks).sort(function(a, b) { return b - a; });
-            if (keys.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#718096; margin-top:40px;">デッキがありません。</p>';
-                return;
-            }
-            keys.forEach(function(id) {
-                const deck = decks[id];
-                const masteredCount = deck.cards.filter(function(c) { return c.mastered; }).length;
-                const totalCount = deck.cards.length;
-                const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
-                const div = document.createElement('div');
-                div.className = 'deck-item';
-                div.innerHTML = `
-                    <div class="deck-info"><b>${deck.name}</b><small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small></div>
-                    <div class="deck-btns">
-                        <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
-                        <button class="btn btn-outline" onclick="resetDeckProgress('${id}')">🔄</button>
-                        <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
+                const container = document.getElementById('deckItems');
+                container.innerHTML = '';
+
+                // --- 1. お気に入りカードのカウント（表示用） ---
+                let allFavCards = [];
+                Object.keys(decks).forEach(id => {
+                    const favs = decks[id].cards.filter(c => c.favorite);
+                    favs.forEach(c => {
+                        allFavCards.push({ ...c, _originDeckId: id });
+                    });
+                });
+
+                // --- 2. お気に入りフォルダの表示 (枚数に関わらず常に出す) ---
+                const favDiv = document.createElement('div');
+                favDiv.className = 'deck-item';
+                favDiv.style.border = "2px solid #ffcc00"; // お気に入りカラー
+                favDiv.style.background = "#fffdf0";      // ほんのり黄色い背景
+
+                // 枚数によってボタンの有効/無効を切り替える（0枚なら押せなくする工夫）
+                const isDisable = allFavCards.length === 0 ? 'disabled style="background:#ccc; border:none; color:#fff; cursor:not-allowed;"' : 'style="background:#ffcc00; border:none; color:#fff;"';
+
+                favDiv.innerHTML = `
+        <div class="deck-info">
+            <b style="color: #d4af37;">🌟 お気に入りフォルダ</b>
+            <small>${allFavCards.length} 枚のカード</small>
+        </div>
+        <div class="deck-btns">
+            <button class="btn btn-primary" ${isDisable} onclick="openFavoriteDeck()">学習</button>
+        </div>
+    `;
+                container.appendChild(favDiv);
+
+                // --- 3. 既存のデッキ一覧を表示 ---
+                const keys = Object.keys(decks).sort(function (a, b) { return b - a; });
+
+                // デッキが一つもない場合
+                if (keys.length === 0) {
+                    const emptyMsg = document.createElement('p');
+                    emptyMsg.style = "text-align:center; color:#718096; margin-top:40px;";
+                    emptyMsg.textContent = "デッキがありません。";
+                    container.appendChild(emptyMsg);
+                    return;
+                }
+
+                // 各デッキを生成
+                keys.forEach(function (id) {
+                    const deck = decks[id];
+                    const masteredCount = deck.cards.filter(function (c) { return c.mastered; }).length;
+                    const totalCount = deck.cards.length;
+                    const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+
+                    const div = document.createElement('div');
+                    div.className = 'deck-item';
+                    div.innerHTML = `
+            <div class="deck-info">
+                <b>${deck.name}</b>
+                <small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small>
+            </div>
+            <div class="deck-btns">
+                <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
+                <button class="btn btn-outline" onclick="resetDeckProgress('${id}')">🔄</button>
+                <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
+            </div>
+        `;
+                    container.appendChild(div);
+                });
         }
 
         function createNewDeck() {
@@ -698,13 +750,22 @@
 
                     // 描画負荷を下げるため、構造をシンプルに維持
                     slot.innerHTML = `
-            <div class="flashcard-wrapper">
-                <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
-                    <div class="flashcard-face flashcard-front">${cardData.question}</div>
-                    <div class="flashcard-face flashcard-back">${cardData.answer}</div>
-                </div>
+    <div class="flashcard-wrapper">
+        <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
+            <div class="flashcard-face flashcard-front">${cardData.question}</div>
+            
+            <div class="flashcard-face flashcard-back" style="flex-direction: column; justify-content: center;">
+                <div style="flex-grow: 1; display: flex; align-items: center;">${cardData.answer}</div>
+                
+                ${cardData.comment ? `
+                <div style="width: 100%; font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 12px; font-weight: normal; text-align: left; margin-bottom: 5px; line-height: 1.4;">
+                    <div style="font-size: 0.6rem; opacity: 0.7; margin-bottom: 2px;">💡 コメント</div>
+                    ${cardData.comment}
+                </div>` : ''}
             </div>
-        `;
+        </div>
+    </div>
+`;
                     track.appendChild(slot);
                 });
 
@@ -811,42 +872,86 @@
             inner.style.transform = inner.style.transform.includes('180deg') ? 'rotateY(0deg)' : 'rotateY(180deg)';
         }
 
-        function updateCardInfo() {
+       function updateCardInfo() {
+            if (displayOrder.length === 0) return;
+            const deck = decks[currentDeckId];
+            const card = deck.cards[displayOrder[currentCardIndex]];
+
+            // --- 1. 進捗計算（お気に入りフォルダ対応） ---
+            let masteredCount, totalCount;
+            if (currentDeckId === "FAVORITE_MODE") {
+                // お気に入りフォルダの場合、表示中のリストから計算
+                masteredCount = deck.cards.filter(c => c.mastered).length;
+                totalCount = deck.cards.length;
+            } else {
+                // 通常デッキの場合
+                masteredCount = deck.cards.filter(c => c.mastered).length;
+                totalCount = deck.cards.length;
+            }
+            const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+
+            // テキスト更新
+            document.getElementById('masteredCountText').textContent = masteredCount + " / " + totalCount;
+            document.getElementById('progressPercentText').textContent = percent + "%";
+
+            // --- 2. 円グラフの更新 ---
+            const circle = document.getElementById('progressCircle');
+            if (circle) {
+                const r = 20;
+                const circumference = 2 * Math.PI * r;
+                circle.style.strokeDasharray = circumference;
+                const offset = circumference - (percent / 100 * circumference);
+                circle.style.strokeDashoffset = offset;
+            }
+
+            // --- 3. 下部の直線進行状況バー ---
+            const progressPercent = ((currentCardIndex + 1) / displayOrder.length) * 100;
+            const bar = document.getElementById('linearProgressBar');
+            if (bar) bar.style.width = progressPercent + "%";
+
+            // --- 4. 習得ボタンの状態更新 ---
+            const mBtn = document.getElementById('masteredBtn');
+            mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
+            // デザインを統一するため既存のクラスを動的に切り替え
+            mBtn.style.borderColor = card.mastered ? '#48bb78' : '#e2e8f0';
+            mBtn.style.color = card.mastered ? '#48bb78' : '#4a5568';
+
+            // --- 5. お気に入りボタンの状態更新（塗りつぶし） ---
+            const fBtn = document.getElementById('favoriteBtn');
+            if (fBtn) {
+                if (card.favorite) {
+                    fBtn.textContent = "★"; // 塗りつぶし
+                    fBtn.style.background = "#ffcc00";
+                    fBtn.style.color = "#fff";
+                } else {
+                    fBtn.textContent = "☆"; // 白抜き
+                    fBtn.style.background = "transparent";
+                    fBtn.style.color = "#ffcc00";
+                }
+            }
+        }
+
+        // お気に入りの切り替え
+        function toggleFavorite() {
                 if (displayOrder.length === 0) return;
-                const deck = decks[currentDeckId];
-                const card = deck.cards[displayOrder[currentCardIndex]];
 
-                const masteredCount = deck.cards.filter(c => c.mastered).length;
-                const totalCount = deck.cards.length;
-                const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+                const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
 
-                // テキスト更新
-                document.getElementById('masteredCountText').textContent = masteredCount + " / " + totalCount;
-                document.getElementById('progressPercentText').textContent = percent + "%";
+                // お気に入り状態を反転
+                card.favorite = !card.favorite;
 
-                // --- 円グラフのバグ修正：PC・モバイル両対応 ---
-                const circle = document.getElementById('progressCircle');
-                if (circle) {
-                    const r = 20; // 半径
-                    const circumference = 2 * Math.PI * r; // 円周 (約125.66)
-
-                    // SVGのダッシュ設定を強制的に円周に合わせる
-                    circle.style.strokeDasharray = circumference;
-
-                    // 習得率に合わせてオフセットを計算
-                    const offset = circumference - (percent / 100 * circumference);
-                    circle.style.strokeDashoffset = offset;
+                // --- 元のデッキへ同期させる処理 ---
+                if (currentDeckId === "FAVORITE_MODE" && card._originalDeckId) {
+                    const originDeck = decks[card._originalDeckId];
+                    if (originDeck && originDeck.cards[card._originalIndex]) {
+                        originDeck.cards[card._originalIndex].favorite = card.favorite;
+                    }
                 }
 
-                // 下部の直線進行状況バー
-                const progressPercent = ((currentCardIndex + 1) / displayOrder.length) * 100;
-                const bar = document.getElementById('linearProgressBar');
-                if (bar) bar.style.width = progressPercent + "%";
-
-                // ボタンの状態更新
-                const mBtn = document.getElementById('masteredBtn');
-                mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
-                mBtn.className = card.mastered ? 'btn btn-success' : 'btn btn-outline';
+                saveToLocal();
+                updateCardInfo(); // 星の塗りつぶし更新
+                renderDecks();    // メイン画面の枚数表示を更新
+                showToast(card.favorite ? "★ お気に入り" : "☆ 解除");
         }
 
         async function toggleMastered() {
@@ -857,6 +962,14 @@
                 // 状態を反転させる
                 card.mastered = !card.mastered;
 
+                // --- 元のデッキへ同期させる処理 ---
+                if (currentDeckId === "FAVORITE_MODE" && card._originalDeckId) {
+                    const originDeck = decks[card._originalDeckId];
+                    if (originDeck && originDeck.cards[card._originalIndex]) {
+                        originDeck.cards[card._originalIndex].mastered = card.mastered;
+                    }
+                }
+
                 // 1. まず画面上の表示（色やテキスト）を即座に更新する
                 saveToLocal();
                 updateCardInfo();
@@ -864,12 +977,9 @@
 
                 // 2. 「習得済み」にした場合のみ、少し待ってから自動で次へ
                 if (card.mastered) {
-                    // 連打によるバグを防ぐため一時的にフラグを立てる
                     isTransitioning = true;
-
-                    // 0.8秒（800ミリ秒）待機
+                    // 0.5秒待機
                     await new Promise(resolve => setTimeout(resolve, 500));
-
                     isTransitioning = false;
                     nextCard(); // 自動で次のカードへ
                 }
@@ -889,49 +999,84 @@
             if (area.style.display === 'flex') area.style.display = 'none';
             else { renderBulkList(); area.style.display = 'flex'; }
         }
+        // 【修正後】
         function renderBulkList() {
-            const container = document.getElementById('bulkList');
-    // 検索窓に入力された文字を取得
-            const searchInput = document.getElementById('cardSearch');
-            const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-    
-            container.innerHTML = '';
-    
-    // 現在のデッキ内のカードをループして表示
-            decks[currentDeckId].cards.forEach(function(card, index) {
-        // 問題か答えに検索文字が含まれているかチェック
-                const isMatch = card.question.toLowerCase().includes(searchTerm) || 
-                                card.answer.toLowerCase().includes(searchTerm);
-        
-        // 一致する場合のみ表示（検索窓が空なら全部表示されます）
-                if (isMatch) {
-                    const row = document.createElement('div');
-                    row.className = 'bulk-row';
-                    row.innerHTML = `
-                        <input type="text" class="bulk-input q" value="${card.question}">
-                        <input type="text" class="bulk-input a" value="${card.answer}">
-                        <button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
-                    `;
-                    container.appendChild(row);
-                }
-            });
+                const list = document.getElementById('bulkList');
+                const searchTerm = document.getElementById('cardSearch').value.toLowerCase();
+                list.innerHTML = '';
+
+                decks[currentDeckId].cards.forEach((card, originalIdx) => {
+                    if (card.question.toLowerCase().includes(searchTerm) || card.answer.toLowerCase().includes(searchTerm)) {
+                        const row = document.createElement('div');
+                        row.className = 'bulk-row';
+
+                        // レイアウトを「問題・答え・コメント」の3列にするために grid を調整
+                        row.style.gridTemplateColumns = "1fr 1fr 1fr 45px";
+
+                        row.innerHTML = `
+                <input type="text" value="${card.question}" class="bulk-input q" placeholder="問題">
+                <input type="text" value="${card.answer}" class="bulk-input a" placeholder="答え">
+                <input type="text" value="${card.comment || ''}" class="bulk-input c" placeholder="コメント">
+                <button class="btn btn-danger" onclick="removeBulkCard(${originalIdx})">×</button>
+            `;
+                        list.appendChild(row);
+                    }
+                });
         }
 
         function addCard() {
-            const q = document.getElementById('newQ'), a = document.getElementById('newA');
-            if (q.value.trim() && a.value.trim()) {
-                const row = document.createElement('div'); row.className = 'bulk-row';
-                row.innerHTML = `<input type="text" class="bulk-input q" value="${q.value.trim()}"><input type="text" class="bulk-input a" value="${a.value.trim()}"><button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>`;
-                document.getElementById('bulkList').appendChild(row);
-                q.value = ''; a.value = ''; q.focus();
-            }
+                const q = document.getElementById('newQ').value.trim();
+                const a = document.getElementById('newA').value.trim();
+                const c = document.getElementById('newC').value.trim(); // 追加：コメントを取得
+
+                if (q && a) {
+                    decks[currentDeckId].cards.push({
+                        question: q,
+                        answer: a,
+                        comment: c, // 追加：データに保存
+                        mastered: false,
+                        favorite: false // 追加：初期値として設定
+                    });
+
+                    // 入力欄をすべて空にする
+                    document.getElementById('newQ').value = '';
+                    document.getElementById('newA').value = '';
+                    document.getElementById('newC').value = ''; // 追加：コメント欄も空に
+
+                    renderBulkList(); // リストを再描画
+                }
         }
+
         function saveBulkChanges() {
-            const qs = document.querySelectorAll('.bulk-input.q'), as = document.querySelectorAll('.bulk-input.a');
-            const updated = [];
-            qs.forEach(function(q, i) { if (q.value.trim()) updated.push({ question: q.value.trim(), answer: as[i].value.trim(), mastered: false }); });
-            decks[currentDeckId].cards = updated;
-            saveToLocal(); renderDecks(); applyDisplayOrder(); renderSlider(); toggleBulkEdit(); showToast("保存完了");
+                // 1. セレクタを修正してコメント欄(.c)も取得するようにする
+                const qs = document.querySelectorAll('.bulk-input.q');
+                const as = document.querySelectorAll('.bulk-input.a');
+                const cs = document.querySelectorAll('.bulk-input.c'); // 追加
+
+                const updated = [];
+                const oldCards = decks[currentDeckId].cards; // 元のデータを参照用にとる
+
+                qs.forEach(function (q, i) {
+                    if (q.value.trim()) {
+                        updated.push({
+                            question: q.value.trim(),
+                            answer: as[i].value.trim(),
+                            // コメントを保存（入力がなければ空文字）
+                            comment: cs[i] ? cs[i].value.trim() : (oldCards[i]?.comment || ""),
+                            // 既存のカードがある場合は、習得状況とお気に入りを引き継ぐ
+                            mastered: oldCards[i] ? oldCards[i].mastered : false,
+                            favorite: oldCards[i] ? oldCards[i].favorite : false
+                        });
+                    }
+                });
+
+                decks[currentDeckId].cards = updated;
+                saveToLocal();
+                renderDecks();
+                applyDisplayOrder();
+                renderSlider();
+                toggleBulkEdit();
+                showToast("保存完了");
         }
 
         // --- 外部連携 ---
@@ -1118,17 +1263,25 @@
 
             // A列に問題、B列に答えがあるデータを抽出
                     const cards = json
-                        .filter(row => row[0] && row[1]) // 両方の列に値がある行のみ
+                        .filter(row => row[0] && row[1]) // A列とB列に値がある行のみ
                         .map(row => ({
                             question: String(row[0]).trim(),
                             answer: String(row[1]).trim(),
-                            mastered: false
+                            mastered: row[2] === 1 || row[2] === "1", // C列: 習得状況
+                            comment: row[3] ? String(row[3]).trim() : "", // ★D列: コメントを追加
+                            favorite: false
                         }));
 
                     if (cards.length > 0) {
                 // ファイル名（拡張子抜き）をデッキ名にする
                         const deckName = file.name.replace(/\.[^/.]+$/, "");
-                        const id = (Date.now() + Math.random()).toString(); // IDの重複防止
+                        // 1. まず同じ名前のデッキが既に存在するか確認する
+                        let id = Object.keys(decks).find(key => decks[key].name === deckName);
+
+                        // 2. 存在しない場合のみ、新しいIDを発行する
+                        if (!id) {
+                            id = (Date.now() + Math.random()).toString();
+                        }
                 
                         decks[id] = {
                             name: deckName,
@@ -1146,7 +1299,42 @@
             event.target.value = ''; // 選択をリセット
         }
 
+        function openFavoriteDeck() {
+                // 1. 全デッキからお気に入りカードだけを収集
+                let favCards = [];
+                Object.keys(decks).forEach(deckId => {
+                    decks[deckId].cards.forEach((card, index) => {
+                        if (card.favorite) {
+                            // 学習画面で元のデッキを更新できるように情報を付与
+                            favCards.push({
+                                ...card,
+                                _originalDeckId: deckId,
+                                _originalIndex: index
+                            });
+                        }
+                    });
+                });
+
+                if (favCards.length === 0) return;
+
+                // 2. 学習用の変数をお気に入り専用にセット
+                currentDeckId = "FAVORITE_MODE"; // 特殊なID
+
+                // 一時的な「お気に入りデッキ」構造を作成
+                const tempDeck = {
+                    name: "お気に入りカード",
+                    cards: favCards
+                };
+
+                // グローバルな decks オブジェクトに一時的に登録（既存の openDeck 処理を流用するため）
+                decks["FAVORITE_MODE"] = tempDeck;
+
+                // 3. 学習画面を開く（既存の openDeck 関数を呼び出し）
+                openDeck("FAVORITE_MODE");
+
+                // 4. 学習画面のタイトルを調整
+                document.getElementById('modalTitle').textContent = "🌟 お気に入り学習";
+        }
     </script>
 </body>
 </html>
-
