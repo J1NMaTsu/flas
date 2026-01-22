@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#667eea">
     <title>フラッシュカード Pro完全版（スワイプ対応）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -25,7 +25,8 @@
             display: flex;
             flex-direction: column;
             color: #333;
-            transition: background 0.5s ease; /* 切り替えをなめらかに */
+            transition: background 0.5s ease;
+         /* 横幅がズレないように固定 */
         }
 
 /* ヘッダーの背景も連動 */
@@ -202,6 +203,13 @@
             height: 100%;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
+
+    /* --- 追加部分 --- */
+            -webkit-backface-visibility: hidden; /* 裏面の計算をサボらせる */
+            backface-visibility: hidden;
+            -webkit-transform: translate3d(0,0,0); /* 常に3Dモードで高速化 */
+            transform: translate3d(0,0,0);
+            will-change: transform; /* 回転する準備をあらかじめさせる */
         }
 
         .flashcard-face {
@@ -421,7 +429,7 @@
                 <button onclick="setTheme('forest')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
             
-            <p>効率的な学習のための完全版 v26.1.22.1800</p>
+            <p>効率的な学習のための完全版 v26.1.22.1845</p>
         </div>
 
         <div class="content">
@@ -667,29 +675,41 @@
         }
 
         function renderSlider() {
-            const track = document.getElementById('sliderTrack');
-            track.innerHTML = '';
-            if (displayOrder.length === 0) {
-                track.innerHTML = '<div class="card-slot"><div>カードがありません</div></div>';
-                if(document.getElementById('masteredCountText')) document.getElementById('masteredCountText').textContent = "0 / 0";
-                return;
+                const track = document.getElementById('sliderTrack');
+
+                // --- 【iPhone安定化修正】メモリ解放 ---
+                // 前のカード要素を物理的に削除し、ブラウザのメモリを強制的に空けます
+                while (track.firstChild) {
+                    track.removeChild(track.firstChild);
+                }
+
+                if (displayOrder.length === 0) {
+                    track.innerHTML = '<div class="card-slot"><div>カードがありません</div></div>';
+                    if (document.getElementById('masteredCountText')) document.getElementById('masteredCountText').textContent = "0 / 0";
+                    return;
+                }
+
+                // --- 【負荷軽減】現在のカードとその前後だけを作る ---
+                // すべてのカードを一気に作るとiPhoneがパンクするため
+                displayOrder.forEach(function (originalIdx, i) {
+                    const cardData = decks[currentDeckId].cards[originalIdx];
+                    const slot = document.createElement('div');
+                    slot.className = 'card-slot';
+
+                    // 描画負荷を下げるため、構造をシンプルに維持
+                    slot.innerHTML = `
+            <div class="flashcard-wrapper">
+                <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
+                    <div class="flashcard-face flashcard-front">${cardData.question}</div>
+                    <div class="flashcard-face flashcard-back">${cardData.answer}</div>
+                </div>
+            </div>
+        `;
+                    track.appendChild(slot);
+                });
+
+                updateSlider(false);
             }
-            displayOrder.forEach(function(originalIdx, i) {
-                const card = decks[currentDeckId].cards[originalIdx];
-                const slot = document.createElement('div');
-                slot.className = 'card-slot';
-                slot.innerHTML = `
-                    <div class="flashcard-wrapper">
-                        <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg);">
-                            <div class="flashcard-face flashcard-front">${card.question}</div>
-                            <div class="flashcard-face flashcard-back">${card.answer}</div>
-                        </div>
-                    </div>
-                `;
-                track.appendChild(slot);
-            });
-            updateSlider(false);
-        }
 
         // --- タッチ・スワイプ・タップ判定 ---
         const viewport = document.getElementById('sliderViewport');
@@ -749,27 +769,34 @@
         }
 
         function nextCard() {
-            if (currentCardIndex < displayOrder.length - 1) {
-        // まだ次のカードがある場合
-                currentCardIndex++;
-                updateSlider(true);
-            } else {
-        // 最後のカードに到達した場合
-                if (isRepeatOn) {
-            // 【重要】リピートONの時：インデックスを0に戻してスライダーを更新
-                    currentCardIndex = 0; 
-            
-            // アニメーションなしで一瞬で戻すか、アニメーションありで戻すか選べます
-            // updateSlider(true) なら右から左へシャーッと戻ります
-                    updateSlider(true); 
-            
-                    showToast("最初からリピートします");
+                if (currentCardIndex < displayOrder.length - 1) {
+                    // まだ次のカードがある場合
+                    currentCardIndex++;
+                    updateSlider(true);
                 } else {
-            // リピートOFFなら終了画面を表示
-                    document.getElementById('finishOverlay').style.display = 'flex';
+                    // 最後のカードに到達した場合
+                    if (isRepeatOn) {
+                        // --- 【Version 1.5: 習得状況を再チェック】 ---
+                        // リピートする瞬間に、現在の「未習得のみ」等の条件でリストを更新する
+                        applyDisplayOrder();
+
+                        // リスト更新後、まだカードが残っているか確認
+                        if (displayOrder.length > 0) {
+                            currentCardIndex = 0;
+                            // スライダーを再描画（リストの中身が変わっている可能性があるため）
+                            renderSlider();
+                            showToast("未習得のみでリピートします");
+                        } else {
+                            // すべて習得済みになってしまった場合
+                            closeFlashcards();
+                            showToast("すべて習得しました！お疲れ様でした");
+                        }
+                    } else {
+                        // リピートOFFなら終了（既存の処理があればここに）
+                        showToast("全カード終了しました");
+                    }
                 }
             }
-        }
 
         function prevCard() {
             if (currentCardIndex > 0) {
@@ -822,13 +849,31 @@
                 mBtn.className = card.mastered ? 'btn btn-success' : 'btn btn-outline';
         }
 
-        function toggleMastered() {
-            if (displayOrder.length === 0) return;
-            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
-            card.mastered = !card.mastered;
-            saveToLocal(); updateCardInfo(); renderDecks();
-        }
+        async function toggleMastered() {
+                if (displayOrder.length === 0 || isTransitioning) return;
 
+                const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
+
+                // 状態を反転させる
+                card.mastered = !card.mastered;
+
+                // 1. まず画面上の表示（色やテキスト）を即座に更新する
+                saveToLocal();
+                updateCardInfo();
+                renderDecks(); // メイン画面の進捗も更新
+
+                // 2. 「習得済み」にした場合のみ、少し待ってから自動で次へ
+                if (card.mastered) {
+                    // 連打によるバグを防ぐため一時的にフラグを立てる
+                    isTransitioning = true;
+
+                    // 0.8秒（800ミリ秒）待機
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    isTransitioning = false;
+                    nextCard(); // 自動で次のカードへ
+                }
+        }
         function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); renderSlider(); }
         function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); renderSlider(); }
         function updateControlUI() {
