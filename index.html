@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
-    <title>フラッシュカード Pro完全版（フル機能・ショートカット対応）</title>
+    <title>フラッシュカード Pro完全版（スワイプ対応）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -13,7 +13,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: manipulation;
+            touch-action: pan-y; /* スワイプ判定のため縦方向のみ許可 */
         }
         
         body {
@@ -327,7 +327,7 @@
     <div class="container">
         <div class="header">
             <h1>🃏 フラッシュカード Pro</h1>
-            <p>効率的な学習のための完全版</p>
+            <p>効率的な学習のための完全版　スワイプを修正</p>
         </div>
 
         <div class="content">
@@ -416,13 +416,16 @@
         let isTransitioning = false;
         let videoStream = null;
 
+        // スワイプ判定用変数
+        let touchStartX = 0;
+        let touchEndX = 0;
+
         window.addEventListener('load', function() {
             const savedData = localStorage.getItem('flashcard_decks_v2');
             if (savedData) {
                 try {
                     decks = JSON.parse(savedData);
                 } catch (e) {
-                    console.error("データの読み込みに失敗しました", e);
                     decks = {};
                 }
             }
@@ -434,36 +437,26 @@
         }
 
         // --- メイン画面の処理 ---
-
         function renderDecks() {
             const container = document.getElementById('deckItems');
             container.innerHTML = '';
-            
-            const keys = Object.keys(decks).sort(function(a, b) {
-                return b - a;
-            });
-            
+            const keys = Object.keys(decks).sort(function(a, b) { return b - a; });
             if (keys.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#718096; margin-top:40px;">デッキがありません。新規作成または読み込みを行ってください。</p>';
+                container.innerHTML = '<p style="text-align:center; color:#718096; margin-top:40px;">デッキがありません。</p>';
                 return;
             }
-
             keys.forEach(function(id) {
                 const deck = decks[id];
                 const masteredCount = deck.cards.filter(function(c) { return c.mastered; }).length;
                 const totalCount = deck.cards.length;
                 const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
-
                 const div = document.createElement('div');
                 div.className = 'deck-item';
                 div.innerHTML = `
-                    <div class="deck-info">
-                        <b>${deck.name}</b>
-                        <small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small>
-                    </div>
+                    <div class="deck-info"><b>${deck.name}</b><small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small></div>
                     <div class="deck-btns">
                         <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
-                        <button class="btn btn-outline" onclick="resetDeckProgress('${id}')" title="リセット">🔄</button>
+                        <button class="btn btn-outline" onclick="resetDeckProgress('${id}')">🔄</button>
                         <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
                     </div>
                 `;
@@ -472,60 +465,38 @@
         }
 
         function createNewDeck() {
-            const name = prompt("新規デッキの名前を入力してください:");
+            const name = prompt("新規デッキの名前を入力:");
             if (name && name.trim()) {
                 const id = Date.now().toString();
-                decks[id] = {
-                    name: name.trim(),
-                    cards: []
-                };
-                saveToLocal();
-                renderDecks();
+                decks[id] = { name: name.trim(), cards: [] };
+                saveToLocal(); renderDecks();
             }
         }
 
         function deleteDeck(id) {
-            if (confirm("このデッキを完全に削除してもよろしいですか？")) {
-                delete decks[id];
-                saveToLocal();
-                renderDecks();
+            if (confirm("削除してもよろしいですか？")) {
+                delete decks[id]; saveToLocal(); renderDecks();
             }
         }
 
         function resetDeckProgress(id) {
-            if (confirm(`「${decks[id].name}」の学習進捗をリセットしますか？`)) {
-                decks[id].cards.forEach(function(card) {
-                    card.mastered = false;
-                });
-                saveToLocal();
-                renderDecks();
-                showToast("進捗をリセットしました");
+            if (confirm("進捗をリセットしますか？")) {
+                decks[id].cards.forEach(function(card) { card.mastered = false; });
+                saveToLocal(); renderDecks(); showToast("リセットしました");
             }
         }
 
         function importFromText() {
-            const input = prompt("共有されたテキストをここに貼り付けてください:");
-            if (input && input.trim()) {
-                processRawData(input.trim());
-            }
+            const input = prompt("共有テキストを貼り付け:");
+            if (input && input.trim()) processRawData(input.trim());
         }
 
         function copyDeckAsText() {
             const deck = decks[currentDeckId];
             if (!deck || deck.cards.length === 0) return;
-            const rawString = deck.name + "::" + deck.cards.map(function(c) {
-                return c.question + "|" + c.answer;
-            }).join("~");
+            const rawString = deck.name + "::" + deck.cards.map(function(c) { return c.question + "|" + c.answer; }).join("~");
             const encoded = btoa(unescape(encodeURIComponent(rawString)));
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(encoded).then(function() {
-                    showToast("デッキデータをコピーしました！");
-                }).catch(function() {
-                    prompt("コピーに失敗。以下をコピーしてください:", encoded);
-                });
-            } else {
-                prompt("以下のテキストをコピーしてください:", encoded);
-            }
+            navigator.clipboard.writeText(encoded).then(function() { showToast("コピーしました"); }).catch(function() { prompt("以下をコピー:", encoded); });
         }
 
         function processRawData(encodedData) {
@@ -540,16 +511,11 @@
                 });
                 const id = Date.now().toString();
                 decks[id] = { name: name + "(共有)", cards: cards };
-                saveToLocal();
-                renderDecks();
-                showToast("デッキを取り込みました");
-            } catch (e) {
-                alert("データの形式が正しくありません。");
-            }
+                saveToLocal(); renderDecks(); showToast("取り込み完了");
+            } catch (e) { alert("形式エラー"); }
         }
 
         // --- 学習画面の処理 ---
-
         function openDeck(id) {
             currentDeckId = id;
             currentCardIndex = 0;
@@ -561,12 +527,8 @@
         function applyDisplayOrder() {
             const deck = decks[currentDeckId];
             let indices = deck.cards.map(function(_, i) { return i; });
-            if (isUnmasteredOnly) {
-                indices = indices.filter(function(i) { return !deck.cards[i].mastered; });
-            }
-            if (isShuffleOn) {
-                indices.sort(function() { return Math.random() - 0.5; });
-            }
+            if (isUnmasteredOnly) indices = indices.filter(function(i) { return !deck.cards[i].mastered; });
+            if (isShuffleOn) indices.sort(function() { return Math.random() - 0.5; });
             displayOrder = indices;
             if (currentCardIndex >= displayOrder.length) currentCardIndex = 0;
             updateControlUI();
@@ -597,10 +559,43 @@
             updateSlider(false);
         }
 
-        document.getElementById('sliderViewport').addEventListener('click', function(e) {
+        // --- タッチ・スワイプ・タップ判定 ---
+        const viewport = document.getElementById('sliderViewport');
+
+        viewport.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, false);
+
+        viewport.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, false);
+
+        function handleSwipe() {
+            const swipeDistance = touchEndX - touchStartX;
+            const threshold = 50; // スワイプと判定する最低距離(px)
+
+            if (Math.abs(swipeDistance) > threshold) {
+                // スワイプ距離が閾値を超えていれば移動
+                if (swipeDistance < 0) {
+                    nextCard(); // 左へスワイプ＝次へ
+                } else {
+                    prevCard(); // 右へスワイプ＝前へ
+                }
+            } else {
+                // スワイプでなければタップとして処理（クリックイベントが別に走るため、ここでは何もしない）
+            }
+        }
+
+        viewport.addEventListener('click', function(e) {
             if (isTransitioning || displayOrder.length === 0) return;
+            
+            // スワイプ直後の誤タップを防ぐ（指が動いていれば無視）
+            if (Math.abs(touchEndX - touchStartX) > 10) return;
+
             const rect = e.currentTarget.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width;
+
             if (x < 0.15) prevCard();
             else if (x > 0.85) nextCard();
             else flipCard();
@@ -610,19 +605,13 @@
             isTransitioning = true;
             const track = document.getElementById('sliderTrack');
             
-            // 全てのカードの向きをリセットする（めくられたままの状態を防ぐ）
+            // 移動時にすべてのカードをリセット
             const allInners = document.querySelectorAll('.flashcard-inner');
-            allInners.forEach(function(inner) {
-                inner.style.transform = 'rotateY(0deg)';
-            });
+            allInners.forEach(function(inner) { inner.style.transform = 'rotateY(0deg)'; });
 
-            if (animate === false) {
-                track.style.transition = "none";
-            } else {
-                track.style.transition = "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-            }
-            
+            track.style.transition = animate === false ? "none" : "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
             track.style.transform = "translateX(-" + (currentCardIndex * 100) + "%)";
+            
             setTimeout(function() { isTransitioning = false; }, 500);
             updateCardInfo();
         }
@@ -646,11 +635,7 @@
         function flipCard() {
             const inner = document.getElementById("inner-" + currentCardIndex);
             if (!inner) return;
-            if (inner.style.transform.includes('180deg')) {
-                inner.style.transform = 'rotateY(0deg)';
-            } else {
-                inner.style.transform = 'rotateY(180deg)';
-            }
+            inner.style.transform = inner.style.transform.includes('180deg') ? 'rotateY(0deg)' : 'rotateY(180deg)';
         }
 
         function updateCardInfo() {
@@ -658,148 +643,82 @@
             const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
             document.getElementById('flashcardProgress').textContent = (currentCardIndex + 1) + " / " + displayOrder.length;
             const mBtn = document.getElementById('masteredBtn');
-            if (card.mastered) {
-                mBtn.textContent = '✅ 習得済み';
-                mBtn.className = 'btn btn-success';
-            } else {
-                mBtn.textContent = '⬜ まだ習得していない';
-                mBtn.className = 'btn btn-outline';
-            }
+            mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
+            mBtn.className = card.mastered ? 'btn btn-success' : 'btn btn-outline';
         }
 
         function toggleMastered() {
             if (displayOrder.length === 0) return;
             const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
             card.mastered = !card.mastered;
-            saveToLocal();
-            updateCardInfo();
-            renderDecks();
+            saveToLocal(); updateCardInfo(); renderDecks();
         }
 
-        function toggleShuffle() {
-            isShuffleOn = !isShuffleOn;
-            applyDisplayOrder();
-            renderSlider();
-        }
-
-        function toggleUnmasteredOnly() {
-            isUnmasteredOnly = !isUnmasteredOnly;
-            applyDisplayOrder();
-            renderSlider();
-        }
-
+        function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); renderSlider(); }
+        function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); renderSlider(); }
         function updateControlUI() {
             document.getElementById('shuffleBtn').className = isShuffleOn ? 'btn btn-active' : 'btn btn-outline';
             document.getElementById('unmasteredOnlyBtn').className = isUnmasteredOnly ? 'btn btn-active' : 'btn btn-outline';
         }
+        function toggleFocusMode() { isFocusMode = !isFocusMode; document.getElementById('flashcardModal').classList.toggle('is-focusing', isFocusMode); }
+        function closeFlashcards() { document.getElementById('flashcardModal').style.display = 'none'; renderDecks(); }
 
-        function toggleFocusMode() {
-            isFocusMode = !isFocusMode;
-            document.getElementById('flashcardModal').classList.toggle('is-focusing', isFocusMode);
-        }
-
-        function closeFlashcards() {
-            document.getElementById('flashcardModal').style.display = 'none';
-            renderDecks();
-        }
-
-        // --- 編集モードの処理 ---
-
+        // --- 編集モード ---
         function toggleBulkEdit() {
             const area = document.getElementById('bulkEditMode');
-            if (area.style.display === 'flex') {
-                area.style.display = 'none';
-            } else {
-                renderBulkList();
-                area.style.display = 'flex';
-            }
+            if (area.style.display === 'flex') area.style.display = 'none';
+            else { renderBulkList(); area.style.display = 'flex'; }
         }
-
         function renderBulkList() {
             const container = document.getElementById('bulkList');
             container.innerHTML = '';
-            decks[currentDeckId].cards.forEach(function(card, index) {
+            decks[currentDeckId].cards.forEach(function(card) {
                 const row = document.createElement('div');
                 row.className = 'bulk-row';
-                row.innerHTML = `
-                    <input type="text" class="bulk-input q" value="${card.question}">
-                    <input type="text" class="bulk-input a" value="${card.answer}">
-                    <button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
-                `;
+                row.innerHTML = `<input type="text" class="bulk-input q" value="${card.question}"><input type="text" class="bulk-input a" value="${card.answer}"><button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>`;
                 container.appendChild(row);
             });
         }
-
         function addCard() {
-            const qInput = document.getElementById('newQ');
-            const aInput = document.getElementById('newA');
-            const qValue = qInput.value.trim();
-            const aValue = aInput.value.trim();
-            if (qValue && aValue) {
-                const container = document.getElementById('bulkList');
-                const row = document.createElement('div');
-                row.className = 'bulk-row';
-                row.innerHTML = `
-                    <input type="text" class="bulk-input q" value="${qValue}">
-                    <input type="text" class="bulk-input a" value="${aValue}">
-                    <button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
-                `;
-                container.appendChild(row);
-                qInput.value = ''; aInput.value = ''; qInput.focus();
+            const q = document.getElementById('newQ'), a = document.getElementById('newA');
+            if (q.value.trim() && a.value.trim()) {
+                const row = document.createElement('div'); row.className = 'bulk-row';
+                row.innerHTML = `<input type="text" class="bulk-input q" value="${q.value.trim()}"><input type="text" class="bulk-input a" value="${a.value.trim()}"><button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>`;
+                document.getElementById('bulkList').appendChild(row);
+                q.value = ''; a.value = ''; q.focus();
             }
         }
-
         function saveBulkChanges() {
-            const qElements = document.querySelectorAll('.bulk-input.q');
-            const aElements = document.querySelectorAll('.bulk-input.a');
-            const updatedCards = [];
-            qElements.forEach(function(qEl, i) {
-                const qText = qEl.value.trim();
-                const aText = aElements[i].value.trim();
-                if (qText) {
-                    updatedCards.push({ question: qText, answer: aText, mastered: false });
-                }
-            });
-            decks[currentDeckId].cards = updatedCards;
-            saveToLocal();
-            renderDecks();
-            applyDisplayOrder();
-            renderSlider();
-            toggleBulkEdit();
-            showToast("編集内容を保存しました");
+            const qs = document.querySelectorAll('.bulk-input.q'), as = document.querySelectorAll('.bulk-input.a');
+            const updated = [];
+            qs.forEach(function(q, i) { if (q.value.trim()) updated.push({ question: q.value.trim(), answer: as[i].value.trim(), mastered: false }); });
+            decks[currentDeckId].cards = updated;
+            saveToLocal(); renderDecks(); applyDisplayOrder(); renderSlider(); toggleBulkEdit(); showToast("保存完了");
         }
 
         // --- 外部連携 ---
-
         document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
-                try {
-                    const data = new Uint8Array(ev.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
-                    const cards = rows.filter(function(r) { return r[0] && r[1]; }).map(function(r) {
-                        return { question: String(r[0]), answer: String(r[1]), mastered: false };
-                    });
-                    const id = Date.now().toString();
-                    decks[id] = { name: file.name.split('.')[0], cards: cards };
-                    saveToLocal(); renderDecks(); showToast("Excelから読み込みました");
-                } catch (err) { alert("Excelの読み込みに失敗しました。"); }
+                const data = new Uint8Array(ev.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+                const cards = rows.filter(r => r[0] && r[1]).map(r => ({ question: String(r[0]), answer: String(r[1]), mastered: false }));
+                const id = Date.now().toString();
+                decks[id] = { name: file.name.split('.')[0], cards: cards };
+                saveToLocal(); renderDecks(); showToast("Excel読込完了");
             };
             reader.readAsArrayBuffer(file);
         });
 
         function showQR() {
             const deck = decks[currentDeckId];
-            const rawString = deck.name + "::" + deck.cards.map(function(c) {
-                return c.question + "|" + c.answer;
-            }).join("~");
-            const encoded = btoa(unescape(encodeURIComponent(rawString)));
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: encoded, width: 256, height: 256 });
+            const raw = deck.name + "::" + deck.cards.map(c => c.question + "|" + c.answer).join("~");
+            const encoded = btoa(unescape(encodeURIComponent(raw)));
+            const container = document.getElementById('qrcode');
+            container.innerHTML = "";
+            new QRCode(container, { text: encoded, width: 256, height: 256 });
             document.getElementById('qrDisplayModal').style.display = 'flex';
         }
 
@@ -808,55 +727,35 @@
             try {
                 videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 const video = document.getElementById('video');
-                video.srcObject = videoStream; video.setAttribute("playsinline", true); video.play();
+                video.srcObject = videoStream; video.play();
                 requestAnimationFrame(tick);
-            } catch (err) { alert("カメラを起動できませんでした。"); stopCamera(); }
+            } catch (err) { alert("カメラ起動不可"); stopCamera(); }
         }
-
-        function stopCamera() {
-            if (videoStream) { videoStream.getTracks().forEach(function(track) { track.stop(); }); }
-            document.getElementById('cameraModal').style.display = 'none';
-        }
-
+        function stopCamera() { if (videoStream) videoStream.getTracks().forEach(t => t.stop()); document.getElementById('cameraModal').style.display = 'none'; }
         function tick() {
             const video = document.getElementById('video');
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                const canvas = document.createElement("canvas");
-                canvas.height = video.videoHeight; canvas.width = video.videoWidth;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const canvas = document.createElement("canvas"); canvas.height = video.videoHeight; canvas.width = video.videoWidth;
+                const ctx = canvas.getContext("2d"); ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
                 if (code) { processRawData(code.data); stopCamera(); return; }
             }
-            if (document.getElementById('cameraModal').style.display === 'flex') {
-                requestAnimationFrame(tick);
-            }
+            if (document.getElementById('cameraModal').style.display === 'flex') requestAnimationFrame(tick);
         }
 
         function showToast(msg) {
-            const t = document.getElementById("toast");
-            t.textContent = msg; t.className = "show";
+            const t = document.getElementById("toast"); t.textContent = msg; t.className = "show";
             setTimeout(function() { t.className = ""; }, 2000);
         }
 
-        // --- ショートカットキー対応 ---
         window.addEventListener('keydown', function(e) {
-            // 学習画面が表示されていない、または入力中の場合は無視
             if (document.getElementById('flashcardModal').style.display !== 'flex') return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
             const key = e.key.toLowerCase();
-            if (key === ' ' || key === 'enter') {
-                e.preventDefault();
-                flipCard();
-            } else if (key === 'arrowright') {
-                nextCard();
-            } else if (key === 'arrowleft') {
-                prevCard();
-            } else if (key === 'm') {
-                // Mキーで習得済み切り替え
-                toggleMastered();
-            }
+            if (key === ' ' || key === 'enter') { e.preventDefault(); flipCard(); }
+            else if (key === 'arrowright') nextCard();
+            else if (key === 'arrowleft') prevCard();
+            else if (key === 'm') toggleMastered();
         });
     </script>
 </body>
