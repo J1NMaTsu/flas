@@ -4,381 +4,859 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
-    <title>フラッシュカードアプリ</title>
+    <title>フラッシュカード Pro完全版（フル機能・ショートカット対応）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; padding: 15px;
-            display: flex; flex-direction: column; color: #333;
-            -webkit-user-select: none; user-select: none;
+            min-height: 100vh;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+            overflow-x: hidden;
         }
-        input, textarea { -webkit-user-select: text; user-select: text; }
+
+        /* メインコンテナ */
         .container {
-            max-width: 900px; width: 100%; margin: 0 auto; background: white;
-            border-radius: 24px; box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-            overflow: hidden; flex-grow: 1;
-        }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-        .content { padding: 20px; }
-        #fileInput { display: none; }
-
-        .action-area { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .upload-section { grid-column: span 2; border: 3px dashed #cbd5e0; border-radius: 20px; padding: 20px; text-align: center; background: #f7fafc; }
-
-        .overlay-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; color: white;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            background: #f8fafc;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 85vh;
         }
 
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .content {
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        /* アクションエリア */
+        .action-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .upload-section {
+            grid-column: span 2;
+            border: 3px dashed #cbd5e0;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            background: white;
+            transition: 0.3s;
+        }
+
+        .upload-section p {
+            font-size: 0.75rem;
+            color: #718096;
+            margin-top: 8px;
+        }
+
+        /* デッキ一覧 */
         .deck-item {
-            background: #ffffff; padding: 18px; margin-bottom: 12px; border-radius: 16px;
-            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-            border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); gap: 15px;
-        }
-        .progress-bar-container { background: #edf2f7; border-radius: 10px; height: 10px; width: 100%; max-width: 250px; margin-top: 8px; overflow: hidden; }
-
-        .flashcard-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px);
-        }
-        .flashcard-container {
-            background: white; width: 95%; max-width: 700px; border-radius: 24px;
-            padding: 20px; max-height: 95vh; overflow-y: auto; position: relative;
-            transition: all 0.3s ease;
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 18px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
-        /* 集中モード用のスタイル：UIを隠す */
-        .focus-hide { transition: opacity 0.3s ease, visibility 0.3s; }
-        .is-focusing .focus-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+        .deck-info b {
+            font-size: 1.1rem;
+            color: #2d3748;
+            display: block;
+            margin-bottom: 4px;
+        }
 
-        .flashcard-wrapper { 
-            position: relative; width: 90%; margin: 20px auto; 
-            aspect-ratio: 4 / 5; max-height: 450px; 
-            perspective: 1000px; touch-action: none;
+        .deck-info small {
+            color: #718096;
         }
-        .flashcard-inner { 
-            position: relative; width: 100%; height: 100%; 
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
-            transform-style: preserve-3d; cursor: pointer; 
-        }
-        .flashcard-face {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; align-items: center; justify-content: center; border-radius: 25px;
-            padding: 30px; font-size: 1.8rem; text-align: center; font-weight: bold;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .flashcard-front { background: #f8fbff; color: #2d3748; border: 3px solid #667eea; }
-        .flashcard-back { background: #10b981; color: white; transform: rotateY(180deg); }
 
-        .btn { padding: 10px 20px; border-radius: 12px; font-size: 0.95rem; cursor: pointer; border: none; font-weight: bold; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .deck-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* ボタン共通 */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
         .btn-primary { background: #667eea; color: white; }
         .btn-success { background: #10b981; color: white; }
         .btn-danger { background: #fc8181; color: white; }
         .btn-outline { border: 2px solid #e2e8f0; background: white; color: #4a5568; }
         .btn-active { background: #f59e0b; color: white; }
 
-        .flashcard-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-top: 15px; }
-        .bulk-edit-area { display: none; margin-top: 20px; }
-        .bulk-row { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; }
-        .bulk-input { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 16px; }
+        /* 学習モーダル */
+        .flashcard-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #edf2f7;
+            z-index: 1000;
+            flex-direction: column;
+        }
 
-        #toast { visibility: hidden; min-width: 220px; background-color: #2d3748; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 3000; left: 50%; bottom: 30px; transform: translateX(-50%); }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2s; }
-        .version-footer { text-align: right; padding: 15px; color: rgba(255,255,255,0.8); font-size: 11px; font-family: monospace; }
+        .modal-header {
+            background: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* スライダーエリア */
+        .slider-viewport {
+            flex-grow: 1;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .slider-track {
+            display: flex;
+            height: 80%;
+            width: 100%;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-slot {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1200px;
+            padding: 20px;
+        }
+
+        .flashcard-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 4 / 3;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 24px;
+            padding: 30px;
+            font-size: clamp(1.2rem, 5vw, 2rem);
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            background: white;
+            border: 2px solid #e2e8f0;
+        }
+
+        .flashcard-front {
+            color: #2d3748;
+            border-bottom: 6px solid #667eea;
+        }
+
+        .flashcard-back {
+            background: #10b981;
+            color: white;
+            transform: rotateY(180deg);
+            border: none;
+        }
+
+        /* コントロールバー */
+        .control-bar {
+            background: white;
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* 編集エリア */
+        .bulk-edit-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 2000;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+        }
+
+        .bulk-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+
+        .bulk-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 45px;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .bulk-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        /* ユーティリティ */
+        .focus-hide {
+            transition: opacity 0.3s;
+        }
+
+        .is-focusing .focus-hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        #toast {
+            visibility: hidden;
+            min-width: 200px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            text-align: center;
+            border-radius: 50px;
+            padding: 12px;
+            position: fixed;
+            left: 50%;
+            bottom: 100px;
+            transform: translateX(-50%);
+            z-index: 9999;
+        }
+
+        #toast.show {
+            visibility: visible;
+        }
+
+        .overlay-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="header"><h1>🃏 フラッシュカード</h1><p>集中モード搭載 Ver</p></div>
+        <div class="header">
+            <h1>🃏 フラッシュカード Pro</h1>
+            <p>効率的な学習のための完全版</p>
+        </div>
+
         <div class="content">
             <div class="action-area">
                 <div class="upload-section">
-                    <input type="file" id="fileInput" accept=".xlsx,.xls">
-                    <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('fileInput').click()">📁 Excel読み込み</button>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+                    <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('fileInput').click()">📁 Excelから読み込み</button>
+                    <p>A列に問題、B列に答えを入力したファイルを読み込めます</p>
                 </div>
-                <button class="btn btn-success" onclick="createNewDeck()">➕ 新規</button>
-                <button class="btn btn-outline" onclick="startCamera()">📷 QR読込</button>
+                <button class="btn btn-success" onclick="createNewDeck()">➕ 新規デッキ</button>
+                <button class="btn btn-outline" onclick="importFromText()">📝 テキスト読込</button>
+                <button class="btn btn-outline" onclick="startCamera()" style="grid-column: span 2;">📷 QRコード読込</button>
             </div>
-            <div id="deckItems"></div>
+
+            <div id="deckItems">
+                </div>
+        </div>
+    </div>
+
+    <div class="flashcard-modal" id="flashcardModal">
+        <div class="modal-header">
+            <div id="flashcardProgress" class="focus-hide" style="font-weight:bold; color:#667eea;"></div>
+            <div style="display:flex; gap:8px;">
+                <button id="focusModeBtn" class="btn btn-outline" onclick="toggleFocusMode()">👁️</button>
+                <button class="btn btn-outline focus-hide" onclick="showQR()">📤 QR</button>
+                <button class="btn btn-outline focus-hide" onclick="copyDeckAsText()">📋 コピー</button>
+                <button class="btn btn-danger" onclick="closeFlashcards()">✕ 終了</button>
+            </div>
+        </div>
+
+        <div class="slider-viewport" id="sliderViewport">
+            <div class="slider-track" id="sliderTrack">
+                </div>
+        </div>
+
+        <div class="control-bar" id="controlBar">
+            <div class="focus-hide" style="text-align:center;">
+                <button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:400px;" onclick="toggleMastered()">⬜ まだ習得していない</button>
+            </div>
+            <div class="focus-hide" style="display:flex; justify-content:center; gap:12px; margin-top:10px;">
+                <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀 シャッフル</button>
+                <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯 未習得のみ</button>
+                <button class="btn btn-outline" onclick="toggleBulkEdit()">📝 編集</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulkEditMode" class="bulk-edit-area">
+        <h2 style="margin-bottom:20px;">カードリストの編集</h2>
+        <div class="bulk-list" id="bulkList"></div>
+        
+        <div style="background:#f7fafc; padding:20px; border-radius:15px; margin-bottom:20px; border: 1px solid #e2e8f0;">
+            <p style="margin-bottom:10px; font-weight:bold;">新しいカードを追加</p>
+            <input type="text" id="newQ" placeholder="問題を入力" class="bulk-input" style="margin-bottom:10px;">
+            <input type="text" id="newA" placeholder="答えを入力" class="bulk-input" style="margin-bottom:10px;">
+            <button class="btn btn-success" style="width:100%" onclick="addCard()">➕ リストに追加</button>
+        </div>
+
+        <div style="display:flex; gap:15px;">
+            <button class="btn btn-success" style="flex:2; height:50px;" onclick="saveBulkChanges()">💾 変更を保存して閉じる</button>
+            <button class="btn btn-outline" style="flex:1;" onclick="toggleBulkEdit()">キャンセル</button>
         </div>
     </div>
 
     <div id="qrDisplayModal" class="overlay-modal" onclick="this.style.display='none'">
-        <div id="qrcode" style="background:white; padding:20px; border-radius:15px;"></div>
-        <p style="margin-top:20px;">QRをスキャンして共有</p>
+        <div id="qrcode" style="background:white; padding:30px; border-radius:20px;"></div>
+        <p style="color:white; margin-top:20px; font-weight:bold;">タップで閉じる</p>
     </div>
 
     <div id="cameraModal" class="overlay-modal">
-        <video id="video" style="width: 100%; max-height: 70vh; background: #000;"></video>
-        <button class="btn btn-danger" style="margin-top:15px;" onclick="stopCamera()">キャンセル</button>
+        <video id="video" style="width:100%; max-width:500px; border-radius:20px; background:black;"></video>
+        <button class="btn btn-danger" style="margin-top:20px;" onclick="stopCamera()">キャンセル</button>
     </div>
 
     <div id="toast"></div>
-    <div class="version-footer" id="versionTag"></div>
-
-    <div class="flashcard-modal" id="flashcardModal">
-        <div class="flashcard-container" id="flashcardContainer">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span id="flashcardProgress" class="focus-hide" style="font-weight:bold; color:#667eea;"></span>
-                <div style="display:flex; gap:5px;">
-                    <button id="focusModeBtn" class="btn btn-outline" style="padding: 5px 12px;" onclick="toggleFocusMode()" title="集中モード">👁️</button>
-                    <button class="btn btn-outline focus-hide" style="padding: 5px 10px; font-size:0.7rem;" onclick="showQR()">📤 QR共有</button>
-                    <button class="btn btn-danger" style="padding: 5px 12px;" onclick="closeFlashcards()">✕</button>
-                </div>
-            </div>
-
-            <div id="learningMode">
-                <div class="flashcard-wrapper" id="swipeArea">
-                    <div class="flashcard-inner" id="flashcardInner">
-                        <div class="flashcard-face flashcard-front" id="flashcardFront"></div>
-                        <div class="flashcard-face flashcard-back" id="flashcardBack"></div>
-                    </div>
-                </div>
-                <div class="focus-hide" style="text-align:center; margin-bottom:10px;"><button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:250px;" onclick="toggleMastered()">⬜ まだ</button></div>
-                <div class="flashcard-controls focus-hide">
-                    <button class="btn btn-primary" onclick="prevCard()">←</button>
-                    <button class="btn btn-primary" onclick="nextCard()">→</button>
-                    <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀</button>
-                    <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯 未習得</button>
-                    <button class="btn btn-success" onclick="flipCard()">🔄</button>
-                </div>
-            </div>
-
-            <div id="bulkEditMode" class="bulk-edit-area">
-                <div id="bulkList" style="max-height: 40vh; overflow-y: auto; margin-bottom: 10px;"></div>
-                <div style="display:flex; gap:10px;"><button class="btn btn-success" style="flex:1;" onclick="saveBulkChanges()">💾 保存</button><button class="btn btn-outline" style="flex:1;" onclick="toggleBulkEdit()">戻る</button></div>
-            </div>
-
-            <div id="addCardSection" class="focus-hide" style="background:#f7fafc; padding:15px; border-radius:16px; margin-top:20px;">
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <input type="text" id="newQ" placeholder="問題" class="bulk-input">
-                    <input type="text" id="newA" placeholder="回答" class="bulk-input">
-                    <button class="btn btn-success" onclick="addCard()">追加</button>
-                </div>
-                <button class="btn btn-outline" style="width:100%; margin-top:10px; font-size:0.8rem;" onclick="toggleBulkEdit()">📝 一括編集・削除</button>
-            </div>
-        </div>
-    </div>
 
     <script>
-        const VERSION = "26.01.22.2600-focus-mode";
-        let decks = {}, currentDeckId = null, currentCardIndex = 0, displayOrder = [];
-        let isShuffleOn = false, isUnmasteredOnly = false, isAnimating = false, isFocusMode = false;
-        let startX = 0, currentX = 0, videoStream = null;
+        // --- データ管理変数の初期化 ---
+        let decks = {};
+        let currentDeckId = null;
+        let currentCardIndex = 0;
+        let displayOrder = [];
+        let isShuffleOn = false;
+        let isUnmasteredOnly = false;
+        let isFocusMode = false;
+        let isTransitioning = false;
+        let videoStream = null;
 
-        window.addEventListener('load', () => {
-            document.getElementById('versionTag').textContent = `Ver: ${VERSION}`;
-            loadDecks(); renderDecks(); setupSwipe();
+        window.addEventListener('load', function() {
+            const savedData = localStorage.getItem('flashcard_decks_v2');
+            if (savedData) {
+                try {
+                    decks = JSON.parse(savedData);
+                } catch (e) {
+                    console.error("データの読み込みに失敗しました", e);
+                    decks = {};
+                }
+            }
+            renderDecks();
         });
 
-        function saveDecks() { localStorage.setItem('flashcard_decks', JSON.stringify(decks)); }
-        function loadDecks() { const s = localStorage.getItem('flashcard_decks'); if (s) decks = JSON.parse(s); }
+        function saveToLocal() {
+            localStorage.setItem('flashcard_decks_v2', JSON.stringify(decks));
+        }
+
+        // --- メイン画面の処理 ---
 
         function renderDecks() {
-            const container = document.getElementById('deckItems'); container.innerHTML = '';
-            Object.keys(decks).forEach(id => {
+            const container = document.getElementById('deckItems');
+            container.innerHTML = '';
+            
+            const keys = Object.keys(decks).sort(function(a, b) {
+                return b - a;
+            });
+            
+            if (keys.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#718096; margin-top:40px;">デッキがありません。新規作成または読み込みを行ってください。</p>';
+                return;
+            }
+
+            keys.forEach(function(id) {
                 const deck = decks[id];
-                const masteredCount = deck.cards.filter(c => c.mastered).length;
-                const percent = Math.round((masteredCount / deck.cards.length) * 100) || 0;
-                const item = document.createElement('div'); item.className = 'deck-item';
-                item.innerHTML = `<div><div style="font-weight:bold;">${deck.name}</div><div class="progress-bar-container"><div style="background:#10b981; height:100%; width:${percent}%"></div></div></div>
-                    <div style="display:flex; gap:5px;"><button class="btn btn-primary" onclick="openDeck('${id}')">学習</button><button class="btn btn-outline" onclick="resetProgress('${id}')">🔄</button><button class="btn btn-outline" style="color:#fc8181;" onclick="deleteDeck('${id}')">🗑️</button></div>`;
-                container.appendChild(item);
+                const masteredCount = deck.cards.filter(function(c) { return c.mastered; }).length;
+                const totalCount = deck.cards.length;
+                const percent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+
+                const div = document.createElement('div');
+                div.className = 'deck-item';
+                div.innerHTML = `
+                    <div class="deck-info">
+                        <b>${deck.name}</b>
+                        <small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small>
+                    </div>
+                    <div class="deck-btns">
+                        <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
+                        <button class="btn btn-outline" onclick="resetDeckProgress('${id}')" title="リセット">🔄</button>
+                        <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(div);
             });
         }
 
-        function openDeck(id) { 
-            currentDeckId = id; currentCardIndex = 0; applyDisplayOrder(); 
-            isFocusMode = false; document.getElementById('flashcardContainer').classList.remove('is-focusing');
-            document.getElementById('flashcardModal').style.display = 'flex'; 
-            updateCard(); 
+        function createNewDeck() {
+            const name = prompt("新規デッキの名前を入力してください:");
+            if (name && name.trim()) {
+                const id = Date.now().toString();
+                decks[id] = {
+                    name: name.trim(),
+                    cards: []
+                };
+                saveToLocal();
+                renderDecks();
+            }
         }
 
-        // --- 集中モード切り替え ---
-        function toggleFocusMode() {
-            isFocusMode = !isFocusMode;
-            const container = document.getElementById('flashcardContainer');
-            const btn = document.getElementById('focusModeBtn');
-            if (isFocusMode) {
-                container.classList.add('is-focusing');
-                btn.textContent = "🔓"; // 解除用アイコン
-                showToast("集中モード：ボタンを隠しました");
-            } else {
-                container.classList.remove('is-focusing');
-                btn.textContent = "👁️";
+        function deleteDeck(id) {
+            if (confirm("このデッキを完全に削除してもよろしいですか？")) {
+                delete decks[id];
+                saveToLocal();
+                renderDecks();
             }
+        }
+
+        function resetDeckProgress(id) {
+            if (confirm(`「${decks[id].name}」の学習進捗をリセットしますか？`)) {
+                decks[id].cards.forEach(function(card) {
+                    card.mastered = false;
+                });
+                saveToLocal();
+                renderDecks();
+                showToast("進捗をリセットしました");
+            }
+        }
+
+        function importFromText() {
+            const input = prompt("共有されたテキストをここに貼り付けてください:");
+            if (input && input.trim()) {
+                processRawData(input.trim());
+            }
+        }
+
+        function copyDeckAsText() {
+            const deck = decks[currentDeckId];
+            if (!deck || deck.cards.length === 0) return;
+            const rawString = deck.name + "::" + deck.cards.map(function(c) {
+                return c.question + "|" + c.answer;
+            }).join("~");
+            const encoded = btoa(unescape(encodeURIComponent(rawString)));
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(encoded).then(function() {
+                    showToast("デッキデータをコピーしました！");
+                }).catch(function() {
+                    prompt("コピーに失敗。以下をコピーしてください:", encoded);
+                });
+            } else {
+                prompt("以下のテキストをコピーしてください:", encoded);
+            }
+        }
+
+        function processRawData(encodedData) {
+            try {
+                const decoded = decodeURIComponent(escape(atob(encodedData)));
+                const parts = decoded.split('::');
+                const name = parts[0];
+                const rowsRaw = parts[1];
+                const cards = rowsRaw.split('~').map(function(row) {
+                    const pair = row.split('|');
+                    return { question: pair[0], answer: pair[1], mastered: false };
+                });
+                const id = Date.now().toString();
+                decks[id] = { name: name + "(共有)", cards: cards };
+                saveToLocal();
+                renderDecks();
+                showToast("デッキを取り込みました");
+            } catch (e) {
+                alert("データの形式が正しくありません。");
+            }
+        }
+
+        // --- 学習画面の処理 ---
+
+        function openDeck(id) {
+            currentDeckId = id;
+            currentCardIndex = 0;
+            applyDisplayOrder();
+            document.getElementById('flashcardModal').style.display = 'flex';
+            renderSlider();
         }
 
         function applyDisplayOrder() {
             const deck = decks[currentDeckId];
-            let indices = deck.cards.map((_, i) => i);
-            if (isUnmasteredOnly) indices = indices.filter(i => !deck.cards[i].mastered);
-            if (isShuffleOn && indices.length > 0) {
-                for (let i = indices.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [indices[i], indices[j]] = [indices[j], indices[i]];
-                }
+            let indices = deck.cards.map(function(_, i) { return i; });
+            if (isUnmasteredOnly) {
+                indices = indices.filter(function(i) { return !deck.cards[i].mastered; });
+            }
+            if (isShuffleOn) {
+                indices.sort(function() { return Math.random() - 0.5; });
             }
             displayOrder = indices;
+            if (currentCardIndex >= displayOrder.length) currentCardIndex = 0;
+            updateControlUI();
         }
 
-        function updateCard() {
-            if (displayOrder.length === 0) { document.getElementById('learningMode').style.display = 'none'; return; }
-            document.getElementById('learningMode').style.display = 'block';
-            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
-            document.getElementById('flashcardFront').textContent = card.question;
-            document.getElementById('flashcardBack').textContent = card.answer;
-            document.getElementById('flashcardProgress').textContent = `${currentCardIndex + 1} / ${displayOrder.length}`;
-            const mBtn = document.getElementById('masteredBtn');
-            mBtn.style.background = card.mastered ? '#10b981' : 'white';
-            mBtn.style.color = card.mastered ? 'white' : '#667eea';
-            mBtn.textContent = card.mastered ? '✅ 習得済み！' : '⬜ まだ';
-            resetCardPos();
-        }
-
-        function resetCardPos() {
-            const inner = document.getElementById('flashcardInner');
-            inner.style.transition = 'transform 0.5s ease-out';
-            inner.style.transform = 'translateX(0) rotateY(0deg) rotateZ(0deg)';
-        }
-
-        function setupSwipe() {
-            const area = document.getElementById('swipeArea');
-            const inner = document.getElementById('flashcardInner');
-            area.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; inner.style.transition = 'none'; });
-            area.addEventListener('touchmove', (e) => {
-                currentX = e.touches[0].clientX;
-                const diff = currentX - startX;
-                inner.style.transform = `translateX(${diff}px) rotateZ(${diff / 15}deg)`;
+        function renderSlider() {
+            const track = document.getElementById('sliderTrack');
+            track.innerHTML = '';
+            if (displayOrder.length === 0) {
+                track.innerHTML = '<div class="card-slot"><div>カードがありません</div></div>';
+                document.getElementById('flashcardProgress').textContent = "0 / 0";
+                return;
+            }
+            displayOrder.forEach(function(originalIdx, i) {
+                const card = decks[currentDeckId].cards[originalIdx];
+                const slot = document.createElement('div');
+                slot.className = 'card-slot';
+                slot.innerHTML = `
+                    <div class="flashcard-wrapper">
+                        <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg);">
+                            <div class="flashcard-face flashcard-front">${card.question}</div>
+                            <div class="flashcard-face flashcard-back">${card.answer}</div>
+                        </div>
+                    </div>
+                `;
+                track.appendChild(slot);
             });
-            area.addEventListener('touchend', (e) => {
-                const diff = currentX - startX;
-                if (Math.abs(diff) < 10) {
-                    const tapX = e.changedTouches[0].clientX - area.getBoundingClientRect().left;
-                    if (tapX > area.offsetWidth / 2) nextCard(); else prevCard();
-                    return;
-                }
-                if (diff > 100) toggleMastered(); else if (diff < -100) nextCard(); else resetCardPos();
-            });
-            area.addEventListener('click', (e) => {
-                const tapX = e.clientX - area.getBoundingClientRect().left;
-                if (tapX > area.offsetWidth / 2) nextCard(); else prevCard();
-            });
+            updateSlider(false);
         }
 
-        function toggleMastered() {
-            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
-            card.mastered = !card.mastered;
-            saveDecks(); renderDecks();
-            const inner = document.getElementById('flashcardInner');
-            inner.style.transition = 'transform 0.4s ease-in';
-            inner.style.transform = 'translateX(500px) rotate(30deg)';
-            setTimeout(() => { updateCard(); }, 400);
+        document.getElementById('sliderViewport').addEventListener('click', function(e) {
+            if (isTransitioning || displayOrder.length === 0) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            if (x < 0.15) prevCard();
+            else if (x > 0.85) nextCard();
+            else flipCard();
+        });
+
+        function updateSlider(animate) {
+            isTransitioning = true;
+            const track = document.getElementById('sliderTrack');
+            
+            // 全てのカードの向きをリセットする（めくられたままの状態を防ぐ）
+            const allInners = document.querySelectorAll('.flashcard-inner');
+            allInners.forEach(function(inner) {
+                inner.style.transform = 'rotateY(0deg)';
+            });
+
+            if (animate === false) {
+                track.style.transition = "none";
+            } else {
+                track.style.transition = "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+            }
+            
+            track.style.transform = "translateX(-" + (currentCardIndex * 100) + "%)";
+            setTimeout(function() { isTransitioning = false; }, 500);
+            updateCardInfo();
         }
 
         function nextCard() {
-            if (currentCardIndex >= displayOrder.length - 1) { resetCardPos(); return; }
-            const inner = document.getElementById('flashcardInner');
-            inner.style.transition = 'transform 0.4s ease-in';
-            inner.style.transform = 'translateX(-500px) rotate(-30deg)';
-            setTimeout(() => { currentCardIndex++; updateCard(); }, 400);
+            if (currentCardIndex < displayOrder.length - 1) {
+                currentCardIndex++;
+                updateSlider(true);
+            } else {
+                showToast("最後のカードです");
+            }
         }
 
         function prevCard() {
-            if (currentCardIndex <= 0) { resetCardPos(); return; }
-            const inner = document.getElementById('flashcardInner');
-            inner.style.transition = 'transform 0.4s ease-in';
-            inner.style.transform = 'translateX(500px) rotate(30deg)';
-            setTimeout(() => { currentCardIndex--; updateCard(); }, 400);
-        }
-
-        function flipCard() { 
-            const inner = document.getElementById('flashcardInner');
-            inner.style.transition = 'transform 0.6s';
-            inner.style.transform = inner.style.transform.includes('180deg') ? 'rotateY(0deg)' : 'rotateY(180deg)';
-        }
-
-        function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); updateCard(); }
-        function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); updateCard(); }
-        function showQR() {
-            const deck = decks[currentDeckId];
-            const code = btoa(unescape(encodeURIComponent(`${deck.name}::${deck.cards.map(c => `${c.question}|${c.answer}`).join('~')}`)));
-            document.getElementById('qrcode').innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: code, width: 256, height: 256 });
-            document.getElementById('qrDisplayModal').style.display = 'flex';
-        }
-        async function startCamera() {
-            document.getElementById('cameraModal').style.display = 'flex';
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            document.getElementById('video').srcObject = videoStream;
-            document.getElementById('video').play();
-            requestAnimationFrame(tick);
-        }
-        function stopCamera() { if (videoStream) videoStream.getTracks().forEach(t => t.stop()); document.getElementById('cameraModal').style.display = 'none'; }
-        function tick() {
-            const v = document.getElementById('video');
-            if (v.readyState === v.HAVE_ENOUGH_DATA) {
-                const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
-                const ctx = c.getContext("2d"); ctx.drawImage(v, 0, 0, c.width, c.height);
-                const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
-                if (code) { processCode(code.data); stopCamera(); return; }
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                updateSlider(true);
             }
-            if (document.getElementById('cameraModal').style.display === 'flex') requestAnimationFrame(tick);
         }
-        function processCode(data) {
-            try {
-                const decoded = decodeURIComponent(escape(atob(data)));
-                const [n, r] = decoded.split('::');
-                const cards = r.split('~').map(row => { const [q, a] = row.split('|'); return { question: q, answer: a, mastered: false }; });
-                decks['deck_'+Date.now()] = { name: n + " (QR)", cards: cards };
-                saveDecks(); renderDecks(); showToast("追加しました！");
-            } catch (e) { alert("無効なQR"); }
+
+        function flipCard() {
+            const inner = document.getElementById("inner-" + currentCardIndex);
+            if (!inner) return;
+            if (inner.style.transform.includes('180deg')) {
+                inner.style.transform = 'rotateY(0deg)';
+            } else {
+                inner.style.transform = 'rotateY(180deg)';
+            }
         }
+
+        function updateCardInfo() {
+            if (displayOrder.length === 0) return;
+            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
+            document.getElementById('flashcardProgress').textContent = (currentCardIndex + 1) + " / " + displayOrder.length;
+            const mBtn = document.getElementById('masteredBtn');
+            if (card.mastered) {
+                mBtn.textContent = '✅ 習得済み';
+                mBtn.className = 'btn btn-success';
+            } else {
+                mBtn.textContent = '⬜ まだ習得していない';
+                mBtn.className = 'btn btn-outline';
+            }
+        }
+
+        function toggleMastered() {
+            if (displayOrder.length === 0) return;
+            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
+            card.mastered = !card.mastered;
+            saveToLocal();
+            updateCardInfo();
+            renderDecks();
+        }
+
+        function toggleShuffle() {
+            isShuffleOn = !isShuffleOn;
+            applyDisplayOrder();
+            renderSlider();
+        }
+
+        function toggleUnmasteredOnly() {
+            isUnmasteredOnly = !isUnmasteredOnly;
+            applyDisplayOrder();
+            renderSlider();
+        }
+
+        function updateControlUI() {
+            document.getElementById('shuffleBtn').className = isShuffleOn ? 'btn btn-active' : 'btn btn-outline';
+            document.getElementById('unmasteredOnlyBtn').className = isUnmasteredOnly ? 'btn btn-active' : 'btn btn-outline';
+        }
+
+        function toggleFocusMode() {
+            isFocusMode = !isFocusMode;
+            document.getElementById('flashcardModal').classList.toggle('is-focusing', isFocusMode);
+        }
+
+        function closeFlashcards() {
+            document.getElementById('flashcardModal').style.display = 'none';
+            renderDecks();
+        }
+
+        // --- 編集モードの処理 ---
+
         function toggleBulkEdit() {
-            const b = document.getElementById('bulkEditMode');
-            if (b.style.display === 'none') { renderBulkList(); b.style.display = 'block'; }
-            else b.style.display = 'none';
+            const area = document.getElementById('bulkEditMode');
+            if (area.style.display === 'flex') {
+                area.style.display = 'none';
+            } else {
+                renderBulkList();
+                area.style.display = 'flex';
+            }
         }
+
         function renderBulkList() {
-            const container = document.getElementById('bulkList'); container.innerHTML = '';
-            decks[currentDeckId].cards.forEach((c, i) => {
-                const row = document.createElement('div'); row.className = 'bulk-row';
-                row.innerHTML = `<input type="text" class="bulk-input q" value="${c.question}"><input type="text" class="bulk-input a" value="${c.answer}"><button class="btn" style="color:red" onclick="this.parentElement.remove()">✕</button>`;
+            const container = document.getElementById('bulkList');
+            container.innerHTML = '';
+            decks[currentDeckId].cards.forEach(function(card, index) {
+                const row = document.createElement('div');
+                row.className = 'bulk-row';
+                row.innerHTML = `
+                    <input type="text" class="bulk-input q" value="${card.question}">
+                    <input type="text" class="bulk-input a" value="${card.answer}">
+                    <button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
+                `;
                 container.appendChild(row);
             });
         }
-        function saveBulkChanges() {
-            const qs = document.querySelectorAll('.bulk-input.q'), as = document.querySelectorAll('.bulk-input.a'), cards = [];
-            qs.forEach((q, i) => { if (q.value.trim()) cards.push({ question: q.value.trim(), answer: as[i].value.trim(), mastered: false }); });
-            decks[currentDeckId].cards = cards; saveDecks(); renderDecks(); applyDisplayOrder(); updateCard(); toggleBulkEdit();
-        }
+
         function addCard() {
-            const q = document.getElementById('newQ').value.trim(), a = document.getElementById('newA').value.trim();
-            if (q && a) { decks[currentDeckId].cards.push({question: q, answer: a, mastered: false}); saveDecks(); renderDecks(); updateCard(); }
+            const qInput = document.getElementById('newQ');
+            const aInput = document.getElementById('newA');
+            const qValue = qInput.value.trim();
+            const aValue = aInput.value.trim();
+            if (qValue && aValue) {
+                const container = document.getElementById('bulkList');
+                const row = document.createElement('div');
+                row.className = 'bulk-row';
+                row.innerHTML = `
+                    <input type="text" class="bulk-input q" value="${qValue}">
+                    <input type="text" class="bulk-input a" value="${aValue}">
+                    <button class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
+                `;
+                container.appendChild(row);
+                qInput.value = ''; aInput.value = ''; qInput.focus();
+            }
         }
-        function createNewDeck() { const n = prompt("デッキ名:"); if (n) { decks['deck_'+Date.now()]={name:n,cards:[]}; saveDecks(); renderDecks(); } }
-        function deleteDeck(id) { if(confirm('削除しますか？')) { delete decks[id]; saveDecks(); renderDecks(); } }
-        function resetProgress(id) { if(confirm('リセットしますか？')) { decks[id].cards.forEach(c=>c.mastered=false); saveDecks(); renderDecks(); } }
-        function closeFlashcards() { document.getElementById('flashcardModal').style.display = 'none'; }
-        function showToast(m) { const t = document.getElementById("toast"); t.textContent = m; t.className = "show"; setTimeout(() => t.className = "", 2000); }
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0]; if(!file) return;
+
+        function saveBulkChanges() {
+            const qElements = document.querySelectorAll('.bulk-input.q');
+            const aElements = document.querySelectorAll('.bulk-input.a');
+            const updatedCards = [];
+            qElements.forEach(function(qEl, i) {
+                const qText = qEl.value.trim();
+                const aText = aElements[i].value.trim();
+                if (qText) {
+                    updatedCards.push({ question: qText, answer: aText, mastered: false });
+                }
+            });
+            decks[currentDeckId].cards = updatedCards;
+            saveToLocal();
+            renderDecks();
+            applyDisplayOrder();
+            renderSlider();
+            toggleBulkEdit();
+            showToast("編集内容を保存しました");
+        }
+
+        // --- 外部連携 ---
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                const wb = XLSX.read(new Uint8Array(ev.target.result), {type: 'array'});
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
-                const newCards = json.slice(1).filter(r => r[0] && r[1]).map(r => ({question: String(r[0]), answer: String(r[1]), mastered: false}));
-                const name = file.name.replace(/\.[^/.]+$/, '');
-                const eid = Object.keys(decks).find(id => decks[id].name === name);
-                if (eid) decks[eid].cards = newCards; else decks['deck_'+Date.now()] = { name: name, cards: newCards };
-                saveDecks(); renderDecks(); e.target.value = '';
+            reader.onload = function(ev) {
+                try {
+                    const data = new Uint8Array(ev.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+                    const cards = rows.filter(function(r) { return r[0] && r[1]; }).map(function(r) {
+                        return { question: String(r[0]), answer: String(r[1]), mastered: false };
+                    });
+                    const id = Date.now().toString();
+                    decks[id] = { name: file.name.split('.')[0], cards: cards };
+                    saveToLocal(); renderDecks(); showToast("Excelから読み込みました");
+                } catch (err) { alert("Excelの読み込みに失敗しました。"); }
             };
             reader.readAsArrayBuffer(file);
+        });
+
+        function showQR() {
+            const deck = decks[currentDeckId];
+            const rawString = deck.name + "::" + deck.cards.map(function(c) {
+                return c.question + "|" + c.answer;
+            }).join("~");
+            const encoded = btoa(unescape(encodeURIComponent(rawString)));
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, { text: encoded, width: 256, height: 256 });
+            document.getElementById('qrDisplayModal').style.display = 'flex';
+        }
+
+        async function startCamera() {
+            document.getElementById('cameraModal').style.display = 'flex';
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const video = document.getElementById('video');
+                video.srcObject = videoStream; video.setAttribute("playsinline", true); video.play();
+                requestAnimationFrame(tick);
+            } catch (err) { alert("カメラを起動できませんでした。"); stopCamera(); }
+        }
+
+        function stopCamera() {
+            if (videoStream) { videoStream.getTracks().forEach(function(track) { track.stop(); }); }
+            document.getElementById('cameraModal').style.display = 'none';
+        }
+
+        function tick() {
+            const video = document.getElementById('video');
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement("canvas");
+                canvas.height = video.videoHeight; canvas.width = video.videoWidth;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+                if (code) { processRawData(code.data); stopCamera(); return; }
+            }
+            if (document.getElementById('cameraModal').style.display === 'flex') {
+                requestAnimationFrame(tick);
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.textContent = msg; t.className = "show";
+            setTimeout(function() { t.className = ""; }, 2000);
+        }
+
+        // --- ショートカットキー対応 ---
+        window.addEventListener('keydown', function(e) {
+            // 学習画面が表示されていない、または入力中の場合は無視
+            if (document.getElementById('flashcardModal').style.display !== 'flex') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const key = e.key.toLowerCase();
+            if (key === ' ' || key === 'enter') {
+                e.preventDefault();
+                flipCard();
+            } else if (key === 'arrowright') {
+                nextCard();
+            } else if (key === 'arrowleft') {
+                prevCard();
+            } else if (key === 'm') {
+                // Mキーで習得済み切り替え
+                toggleMastered();
+            }
         });
     </script>
 </body>
