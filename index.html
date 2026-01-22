@@ -13,7 +13,7 @@
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; padding: clamp(10px, 3vw, 20px);
+            min-height: 100vh; padding: 15px;
             display: flex; flex-direction: column; color: #333;
             -webkit-user-select: none; user-select: none;
         }
@@ -23,13 +23,13 @@
             border-radius: 24px; box-shadow: 0 15px 50px rgba(0,0,0,0.25);
             overflow: hidden; flex-grow: 1;
         }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: clamp(25px, 5vw, 40px); text-align: center; }
-        .content { padding: clamp(20px, 4vw, 30px); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 20px; }
         #fileInput { display: none; }
 
-        .action-area { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .upload-section { grid-column: span 2; border: 3px dashed #cbd5e0; border-radius: 20px; padding: 25px; text-align: center; background: #f7fafc; position: relative; }
-        
+        .action-area { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .upload-section { grid-column: span 2; border: 3px dashed #cbd5e0; border-radius: 20px; padding: 20px; text-align: center; background: #f7fafc; }
+
         .overlay-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; color: white;
@@ -48,23 +48,32 @@
         }
         .flashcard-container {
             background: white; width: 95%; max-width: 700px; border-radius: 24px;
-            padding: clamp(15px, 4vw, 25px); max-height: 95vh; overflow-y: auto; position: relative;
+            padding: 20px; max-height: 95vh; overflow-y: auto; position: relative;
+            transition: all 0.3s ease;
         }
 
-        .flashcard-wrapper { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 300px; margin: 15px 0; overflow: hidden; touch-action: none; }
-        .flashcard-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+        /* 集中モード用のスタイル：UIを隠す */
+        .focus-hide { transition: opacity 0.3s ease, visibility 0.3s; }
+        .is-focusing .focus-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .flashcard-wrapper { 
+            position: relative; width: 90%; margin: 20px auto; 
+            aspect-ratio: 4 / 5; max-height: 450px; 
+            perspective: 1000px; touch-action: none;
+        }
+        .flashcard-inner { 
+            position: relative; width: 100%; height: 100%; 
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
+            transform-style: preserve-3d; cursor: pointer; 
+        }
         .flashcard-face {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; align-items: center; justify-content: center; border-radius: 20px;
-            padding: 25px; font-size: clamp(1.1rem, 4vw, 1.8rem); text-align: center; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; border-radius: 25px;
+            padding: 30px; font-size: 1.8rem; text-align: center; font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        .flashcard-front { background: #f8fbff; color: #2d3748; border: 2px solid #667eea; }
+        .flashcard-front { background: #f8fbff; color: #2d3748; border: 3px solid #667eea; }
         .flashcard-back { background: #10b981; color: white; transform: rotateY(180deg); }
-
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .slide-next { animation: slideInRight 0.3s ease-out; }
-        .slide-prev { animation: slideInLeft 0.3s ease-out; }
 
         .btn { padding: 10px 20px; border-radius: 12px; font-size: 0.95rem; cursor: pointer; border: none; font-weight: bold; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-primary { background: #667eea; color: white; }
@@ -76,7 +85,7 @@
         .flashcard-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-top: 15px; }
         .bulk-edit-area { display: none; margin-top: 20px; }
         .bulk-row { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; }
-        .bulk-input { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 16px; }
+        .bulk-input { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 16px; }
 
         #toast { visibility: hidden; min-width: 220px; background-color: #2d3748; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 3000; left: 50%; bottom: 30px; transform: translateX(-50%); }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2s; }
@@ -85,10 +94,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🃏 フラッシュカード</h1>
-            <p>完全版 (QR・スワイプ・一括編集)</p>
-        </div>
+        <div class="header"><h1>🃏 フラッシュカード</h1><p>集中モード搭載 Ver</p></div>
         <div class="content">
             <div class="action-area">
                 <div class="upload-section">
@@ -104,12 +110,11 @@
 
     <div id="qrDisplayModal" class="overlay-modal" onclick="this.style.display='none'">
         <div id="qrcode" style="background:white; padding:20px; border-radius:15px;"></div>
-        <p style="margin-top:20px;">相手にこのQRをスキャンしてもらってください</p>
+        <p style="margin-top:20px;">QRをスキャンして共有</p>
     </div>
 
     <div id="cameraModal" class="overlay-modal">
         <video id="video" style="width: 100%; max-height: 70vh; background: #000;"></video>
-        <canvas id="qr-canvas" style="display:none;"></canvas>
         <button class="btn btn-danger" style="margin-top:15px;" onclick="stopCamera()">キャンセル</button>
     </div>
 
@@ -117,26 +122,25 @@
     <div class="version-footer" id="versionTag"></div>
 
     <div class="flashcard-modal" id="flashcardModal">
-        <div class="flashcard-container">
+        <div class="flashcard-container" id="flashcardContainer">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span id="flashcardProgress" style="font-weight:bold; color:#667eea;"></span>
+                <span id="flashcardProgress" class="focus-hide" style="font-weight:bold; color:#667eea;"></span>
                 <div style="display:flex; gap:5px;">
-                    <button class="btn btn-outline" style="padding: 5px 10px; font-size:0.7rem;" onclick="showQR()">📤 QR共有</button>
+                    <button id="focusModeBtn" class="btn btn-outline" style="padding: 5px 12px;" onclick="toggleFocusMode()" title="集中モード">👁️</button>
+                    <button class="btn btn-outline focus-hide" style="padding: 5px 10px; font-size:0.7rem;" onclick="showQR()">📤 QR共有</button>
                     <button class="btn btn-danger" style="padding: 5px 12px;" onclick="closeFlashcards()">✕</button>
                 </div>
             </div>
 
             <div id="learningMode">
                 <div class="flashcard-wrapper" id="swipeArea">
-                    <div class="flashcard" id="cardAnimateTarget">
-                        <div class="flashcard-inner" id="flashcardInner" onclick="flipCard()">
-                            <div class="flashcard-face flashcard-front" id="flashcardFront"></div>
-                            <div class="flashcard-face flashcard-back" id="flashcardBack"></div>
-                        </div>
+                    <div class="flashcard-inner" id="flashcardInner">
+                        <div class="flashcard-face flashcard-front" id="flashcardFront"></div>
+                        <div class="flashcard-face flashcard-back" id="flashcardBack"></div>
                     </div>
                 </div>
-                <div style="text-align:center; margin-bottom:10px;"><button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:250px;" onclick="toggleMastered()">⬜ まだ</button></div>
-                <div class="flashcard-controls">
+                <div class="focus-hide" style="text-align:center; margin-bottom:10px;"><button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:250px;" onclick="toggleMastered()">⬜ まだ</button></div>
+                <div class="flashcard-controls focus-hide">
                     <button class="btn btn-primary" onclick="prevCard()">←</button>
                     <button class="btn btn-primary" onclick="nextCard()">→</button>
                     <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀</button>
@@ -150,7 +154,7 @@
                 <div style="display:flex; gap:10px;"><button class="btn btn-success" style="flex:1;" onclick="saveBulkChanges()">💾 保存</button><button class="btn btn-outline" style="flex:1;" onclick="toggleBulkEdit()">戻る</button></div>
             </div>
 
-            <div id="addCardSection" style="background:#f7fafc; padding:15px; border-radius:16px; margin-top:20px; border: 1px solid #e2e8f0;">
+            <div id="addCardSection" class="focus-hide" style="background:#f7fafc; padding:15px; border-radius:16px; margin-top:20px;">
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <input type="text" id="newQ" placeholder="問題" class="bulk-input">
                     <input type="text" id="newA" placeholder="回答" class="bulk-input">
@@ -162,10 +166,10 @@
     </div>
 
     <script>
-        const VERSION = "26.01.22.2410-full-fix";
+        const VERSION = "26.01.22.2600-focus-mode";
         let decks = {}, currentDeckId = null, currentCardIndex = 0, displayOrder = [];
-        let isShuffleOn = false, isUnmasteredOnly = false, isAnimating = false;
-        let touchStartX = 0, touchEndX = 0, videoStream = null;
+        let isShuffleOn = false, isUnmasteredOnly = false, isAnimating = false, isFocusMode = false;
+        let startX = 0, currentX = 0, videoStream = null;
 
         window.addEventListener('load', () => {
             document.getElementById('versionTag').textContent = `Ver: ${VERSION}`;
@@ -189,12 +193,25 @@
         }
 
         function openDeck(id) { 
-            currentDeckId = id; currentCardIndex = 0; isShuffleOn = false; isUnmasteredOnly = false;
-            applyDisplayOrder(); 
+            currentDeckId = id; currentCardIndex = 0; applyDisplayOrder(); 
+            isFocusMode = false; document.getElementById('flashcardContainer').classList.remove('is-focusing');
             document.getElementById('flashcardModal').style.display = 'flex'; 
-            document.getElementById('bulkEditMode').style.display = 'none';
-            document.getElementById('addCardSection').style.display = 'block';
-            updateControlUI(); updateCard(); 
+            updateCard(); 
+        }
+
+        // --- 集中モード切り替え ---
+        function toggleFocusMode() {
+            isFocusMode = !isFocusMode;
+            const container = document.getElementById('flashcardContainer');
+            const btn = document.getElementById('focusModeBtn');
+            if (isFocusMode) {
+                container.classList.add('is-focusing');
+                btn.textContent = "🔓"; // 解除用アイコン
+                showToast("集中モード：ボタンを隠しました");
+            } else {
+                container.classList.remove('is-focusing');
+                btn.textContent = "👁️";
+            }
         }
 
         function applyDisplayOrder() {
@@ -208,15 +225,12 @@
                 }
             }
             displayOrder = indices;
-            if (currentCardIndex >= displayOrder.length) currentCardIndex = 0;
         }
 
-        function updateCard(anim = '') {
-            const deck = decks[currentDeckId], target = document.getElementById('cardAnimateTarget');
+        function updateCard() {
             if (displayOrder.length === 0) { document.getElementById('learningMode').style.display = 'none'; return; }
             document.getElementById('learningMode').style.display = 'block';
-            if (anim) { target.classList.remove('slide-next', 'slide-prev'); void target.offsetWidth; target.classList.add(anim); }
-            const card = deck.cards[displayOrder[currentCardIndex]];
+            const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
             document.getElementById('flashcardFront').textContent = card.question;
             document.getElementById('flashcardBack').textContent = card.answer;
             document.getElementById('flashcardProgress').textContent = `${currentCardIndex + 1} / ${displayOrder.length}`;
@@ -224,70 +238,73 @@
             mBtn.style.background = card.mastered ? '#10b981' : 'white';
             mBtn.style.color = card.mastered ? 'white' : '#667eea';
             mBtn.textContent = card.mastered ? '✅ 習得済み！' : '⬜ まだ';
-            document.getElementById('flashcardInner').style.transform = 'rotateY(0deg)';
+            resetCardPos();
+        }
+
+        function resetCardPos() {
+            const inner = document.getElementById('flashcardInner');
+            inner.style.transition = 'transform 0.5s ease-out';
+            inner.style.transform = 'translateX(0) rotateY(0deg) rotateZ(0deg)';
         }
 
         function setupSwipe() {
             const area = document.getElementById('swipeArea');
-            area.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, false);
-            area.addEventListener('touchend', (e) => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); }, false);
-        }
-
-        function handleSwipe() {
-            const diff = touchEndX - touchStartX;
-            if (diff > 50) toggleMastered(); else if (diff < -50) nextCard();
+            const inner = document.getElementById('flashcardInner');
+            area.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; inner.style.transition = 'none'; });
+            area.addEventListener('touchmove', (e) => {
+                currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                inner.style.transform = `translateX(${diff}px) rotateZ(${diff / 15}deg)`;
+            });
+            area.addEventListener('touchend', (e) => {
+                const diff = currentX - startX;
+                if (Math.abs(diff) < 10) {
+                    const tapX = e.changedTouches[0].clientX - area.getBoundingClientRect().left;
+                    if (tapX > area.offsetWidth / 2) nextCard(); else prevCard();
+                    return;
+                }
+                if (diff > 100) toggleMastered(); else if (diff < -100) nextCard(); else resetCardPos();
+            });
+            area.addEventListener('click', (e) => {
+                const tapX = e.clientX - area.getBoundingClientRect().left;
+                if (tapX > area.offsetWidth / 2) nextCard(); else prevCard();
+            });
         }
 
         function toggleMastered() {
-            if (isAnimating) return;
             const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
             card.mastered = !card.mastered;
-            saveDecks(); renderDecks(); updateCard();
-            if (card.mastered) {
-                isAnimating = true;
-                setTimeout(() => { isAnimating = false; isUnmasteredOnly ? (applyDisplayOrder(), updateCard('slide-next')) : nextCard(); }, 400);
-            }
+            saveDecks(); renderDecks();
+            const inner = document.getElementById('flashcardInner');
+            inner.style.transition = 'transform 0.4s ease-in';
+            inner.style.transform = 'translateX(500px) rotate(30deg)';
+            setTimeout(() => { updateCard(); }, 400);
         }
 
-        function nextCard() { if (currentCardIndex < displayOrder.length - 1) { currentCardIndex++; updateCard('slide-next'); } }
-        function prevCard() { if (currentCardIndex > 0) { currentCardIndex--; updateCard('slide-prev'); } }
-        function flipCard() { const inner = document.getElementById('flashcardInner'); inner.style.transform = inner.style.transform === 'rotateY(180deg)' ? 'rotateY(0deg)' : 'rotateY(180deg)'; }
-        function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); updateControlUI(); updateCard('slide-next'); }
-        function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); updateControlUI(); updateCard('slide-next'); }
-        function updateControlUI() {
-            document.getElementById('shuffleBtn').className = isShuffleOn ? 'btn btn-active' : 'btn btn-outline';
-            document.getElementById('unmasteredOnlyBtn').className = isUnmasteredOnly ? 'btn btn-active' : 'btn btn-outline';
+        function nextCard() {
+            if (currentCardIndex >= displayOrder.length - 1) { resetCardPos(); return; }
+            const inner = document.getElementById('flashcardInner');
+            inner.style.transition = 'transform 0.4s ease-in';
+            inner.style.transform = 'translateX(-500px) rotate(-30deg)';
+            setTimeout(() => { currentCardIndex++; updateCard(); }, 400);
         }
 
-        // --- 一括編集 ---
-        function toggleBulkEdit() {
-            const l = document.getElementById('learningMode'), b = document.getElementById('bulkEditMode'), s = document.getElementById('addCardSection');
-            if (b.style.display === 'none') { renderBulkList(); l.style.display = 'none'; s.style.display = 'none'; b.style.display = 'block'; }
-            else { l.style.display = 'block'; s.style.display = 'block'; b.style.display = 'none'; }
-        }
-        function renderBulkList() {
-            const container = document.getElementById('bulkList'); container.innerHTML = '';
-            decks[currentDeckId].cards.forEach((c, i) => {
-                const row = document.createElement('div'); row.className = 'bulk-row';
-                row.innerHTML = `<input type="text" class="bulk-input q" value="${c.question}"><input type="text" class="bulk-input a" value="${c.answer}"><button class="btn" style="color:red" onclick="this.parentElement.remove()">✕</button>`;
-                container.appendChild(row);
-            });
-        }
-        function saveBulkChanges() {
-            const qs = document.querySelectorAll('.bulk-input.q'), as = document.querySelectorAll('.bulk-input.a'), cards = [];
-            qs.forEach((q, i) => { if (q.value.trim()) cards.push({ question: q.value.trim(), answer: as[i].value.trim(), mastered: false }); });
-            decks[currentDeckId].cards = cards;
-            saveDecks(); renderDecks(); applyDisplayOrder(); updateCard(); toggleBulkEdit();
-        }
-        function addCard() {
-            const q = document.getElementById('newQ').value.trim(), a = document.getElementById('newA').value.trim();
-            if (!q || !a) return;
-            decks[currentDeckId].cards.push({question: q, answer: a, mastered: false});
-            saveDecks(); renderDecks(); applyDisplayOrder(); updateCard();
-            document.getElementById('newQ').value = ''; document.getElementById('newA').value = '';
+        function prevCard() {
+            if (currentCardIndex <= 0) { resetCardPos(); return; }
+            const inner = document.getElementById('flashcardInner');
+            inner.style.transition = 'transform 0.4s ease-in';
+            inner.style.transform = 'translateX(500px) rotate(30deg)';
+            setTimeout(() => { currentCardIndex--; updateCard(); }, 400);
         }
 
-        // --- QR機能 ---
+        function flipCard() { 
+            const inner = document.getElementById('flashcardInner');
+            inner.style.transition = 'transform 0.6s';
+            inner.style.transform = inner.style.transform.includes('180deg') ? 'rotateY(0deg)' : 'rotateY(180deg)';
+        }
+
+        function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); updateCard(); }
+        function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); updateCard(); }
         function showQR() {
             const deck = decks[currentDeckId];
             const code = btoa(unescape(encodeURIComponent(`${deck.name}::${deck.cards.map(c => `${c.question}|${c.answer}`).join('~')}`)));
@@ -298,14 +315,15 @@
         async function startCamera() {
             document.getElementById('cameraModal').style.display = 'flex';
             videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            const v = document.getElementById('video'); v.srcObject = videoStream; v.play();
+            document.getElementById('video').srcObject = videoStream;
+            document.getElementById('video').play();
             requestAnimationFrame(tick);
         }
         function stopCamera() { if (videoStream) videoStream.getTracks().forEach(t => t.stop()); document.getElementById('cameraModal').style.display = 'none'; }
         function tick() {
             const v = document.getElementById('video');
             if (v.readyState === v.HAVE_ENOUGH_DATA) {
-                const c = document.getElementById('qr-canvas'); c.height = v.videoHeight; c.width = v.videoWidth;
+                const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
                 const ctx = c.getContext("2d"); ctx.drawImage(v, 0, 0, c.width, c.height);
                 const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
                 if (code) { processCode(code.data); stopCamera(); return; }
@@ -318,16 +336,36 @@
                 const [n, r] = decoded.split('::');
                 const cards = r.split('~').map(row => { const [q, a] = row.split('|'); return { question: q, answer: a, mastered: false }; });
                 decks['deck_'+Date.now()] = { name: n + " (QR)", cards: cards };
-                saveDecks(); renderDecks(); showToast("追加完了");
+                saveDecks(); renderDecks(); showToast("追加しました！");
             } catch (e) { alert("無効なQR"); }
         }
-
+        function toggleBulkEdit() {
+            const b = document.getElementById('bulkEditMode');
+            if (b.style.display === 'none') { renderBulkList(); b.style.display = 'block'; }
+            else b.style.display = 'none';
+        }
+        function renderBulkList() {
+            const container = document.getElementById('bulkList'); container.innerHTML = '';
+            decks[currentDeckId].cards.forEach((c, i) => {
+                const row = document.createElement('div'); row.className = 'bulk-row';
+                row.innerHTML = `<input type="text" class="bulk-input q" value="${c.question}"><input type="text" class="bulk-input a" value="${c.answer}"><button class="btn" style="color:red" onclick="this.parentElement.remove()">✕</button>`;
+                container.appendChild(row);
+            });
+        }
+        function saveBulkChanges() {
+            const qs = document.querySelectorAll('.bulk-input.q'), as = document.querySelectorAll('.bulk-input.a'), cards = [];
+            qs.forEach((q, i) => { if (q.value.trim()) cards.push({ question: q.value.trim(), answer: as[i].value.trim(), mastered: false }); });
+            decks[currentDeckId].cards = cards; saveDecks(); renderDecks(); applyDisplayOrder(); updateCard(); toggleBulkEdit();
+        }
+        function addCard() {
+            const q = document.getElementById('newQ').value.trim(), a = document.getElementById('newA').value.trim();
+            if (q && a) { decks[currentDeckId].cards.push({question: q, answer: a, mastered: false}); saveDecks(); renderDecks(); updateCard(); }
+        }
         function createNewDeck() { const n = prompt("デッキ名:"); if (n) { decks['deck_'+Date.now()]={name:n,cards:[]}; saveDecks(); renderDecks(); } }
-        function deleteDeck(id) { if(confirm('削除？')) { delete decks[id]; saveDecks(); renderDecks(); } }
-        function resetProgress(id) { if(confirm('リセット？')) { decks[id].cards.forEach(c=>c.mastered=false); saveDecks(); renderDecks(); } }
+        function deleteDeck(id) { if(confirm('削除しますか？')) { delete decks[id]; saveDecks(); renderDecks(); } }
+        function resetProgress(id) { if(confirm('リセットしますか？')) { decks[id].cards.forEach(c=>c.mastered=false); saveDecks(); renderDecks(); } }
         function closeFlashcards() { document.getElementById('flashcardModal').style.display = 'none'; }
         function showToast(m) { const t = document.getElementById("toast"); t.textContent = m; t.className = "show"; setTimeout(() => t.className = "", 2000); }
-
         document.getElementById('fileInput').addEventListener('change', (e) => {
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
