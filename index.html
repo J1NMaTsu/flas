@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
     <title>フラッシュカードアプリ</title>
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
         body {
@@ -26,16 +27,13 @@
         .content { padding: clamp(20px, 4vw, 30px); }
         #fileInput { display: none; }
 
-        /* アップロード進捗バー */
         .action-area { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .upload-section { grid-column: span 2; border: 3px dashed #cbd5e0; border-radius: 20px; padding: 25px; text-align: center; background: #f7fafc; transition: 0.3s; position: relative; }
-        .progress-overlay { 
-            display: none; position: absolute; top:0; left:0; width:100%; height:100%; 
-            background: rgba(255,255,255,0.95); border-radius: 17px;
-            flex-direction: column; justify-content: center; align-items: center; z-index: 5;
+        .upload-section { grid-column: span 2; border: 3px dashed #cbd5e0; border-radius: 20px; padding: 25px; text-align: center; background: #f7fafc; position: relative; }
+        
+        .overlay-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; color: white;
         }
-        .loading-bar-container { width: 80%; height: 8px; background: #edf2f7; border-radius: 10px; margin-top: 10px; overflow: hidden; }
-        .loading-bar-fill { width: 0%; height: 100%; background: #667eea; transition: width 0.2s; }
 
         .deck-item {
             background: #ffffff; padding: 18px; margin-bottom: 12px; border-radius: 16px;
@@ -53,8 +51,7 @@
             padding: clamp(15px, 4vw, 25px); max-height: 95vh; overflow-y: auto; position: relative;
         }
 
-        .flashcard-wrapper { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 300px; margin: 15px 0; overflow: hidden; }
-        .flashcard { width: 100%; height: 100%; perspective: 1000px; }
+        .flashcard-wrapper { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 300px; margin: 15px 0; overflow: hidden; touch-action: none; }
         .flashcard-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
         .flashcard-face {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
@@ -74,14 +71,14 @@
         .btn-success { background: #10b981; color: white; }
         .btn-danger { background: #fc8181; color: white; }
         .btn-outline { border: 2px solid #e2e8f0; background: white; color: #4a5568; }
-        .btn-active { background: #f59e0b; color: white; border-color: #f59e0b; }
+        .btn-active { background: #f59e0b; color: white; }
 
-        .flashcard-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-top: 15px; }
+        .flashcard-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-top: 15px; }
         .bulk-edit-area { display: none; margin-top: 20px; }
         .bulk-row { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; }
         .bulk-input { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 16px; }
-        
-        #toast { visibility: hidden; min-width: 220px; background-color: #2d3748; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 2000; left: 50%; bottom: 30px; transform: translateX(-50%); }
+
+        #toast { visibility: hidden; min-width: 220px; background-color: #2d3748; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 3000; left: 50%; bottom: 30px; transform: translateX(-50%); }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2s; }
         .version-footer { text-align: right; padding: 15px; color: rgba(255,255,255,0.8); font-size: 11px; font-family: monospace; }
     </style>
@@ -90,24 +87,32 @@
     <div class="container">
         <div class="header">
             <h1>🃏 フラッシュカード</h1>
-            <p>26.01.22.2000-overwrite-sync</p>
+            <p>完全版 (QR・スワイプ・一括編集)</p>
         </div>
         <div class="content">
             <div class="action-area">
-                <div class="upload-section" id="dropZone">
-                    <div class="progress-overlay" id="progressOverlay">
-                        <div style="font-weight:bold; color:#667eea;" id="progressText">解析中... 0%</div>
-                        <div class="loading-bar-container"><div class="loading-bar-fill" id="progressBar"></div></div>
-                    </div>
+                <div class="upload-section">
                     <input type="file" id="fileInput" accept=".xlsx,.xls">
-                    <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('fileInput').click()">📁 Excelを読み込む</button>
+                    <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('fileInput').click()">📁 Excel読み込み</button>
                 </div>
-                <button class="btn btn-success" onclick="createNewDeck()">➕ 新規デッキ</button>
-                <button class="btn btn-outline" onclick="location.reload()">🔄 更新</button>
+                <button class="btn btn-success" onclick="createNewDeck()">➕ 新規</button>
+                <button class="btn btn-outline" onclick="startCamera()">📷 QR読込</button>
             </div>
             <div id="deckItems"></div>
         </div>
     </div>
+
+    <div id="qrDisplayModal" class="overlay-modal" onclick="this.style.display='none'">
+        <div id="qrcode" style="background:white; padding:20px; border-radius:15px;"></div>
+        <p style="margin-top:20px;">相手にこのQRをスキャンしてもらってください</p>
+    </div>
+
+    <div id="cameraModal" class="overlay-modal">
+        <video id="video" style="width: 100%; max-height: 70vh; background: #000;"></video>
+        <canvas id="qr-canvas" style="display:none;"></canvas>
+        <button class="btn btn-danger" style="margin-top:15px;" onclick="stopCamera()">キャンセル</button>
+    </div>
+
     <div id="toast"></div>
     <div class="version-footer" id="versionTag"></div>
 
@@ -115,11 +120,14 @@
         <div class="flashcard-container">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span id="flashcardProgress" style="font-weight:bold; color:#667eea;"></span>
-                <button class="btn btn-danger" style="padding: 5px 12px;" onclick="closeFlashcards()">✕ 閉じる</button>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn btn-outline" style="padding: 5px 10px; font-size:0.7rem;" onclick="showQR()">📤 QR共有</button>
+                    <button class="btn btn-danger" style="padding: 5px 12px;" onclick="closeFlashcards()">✕</button>
+                </div>
             </div>
 
             <div id="learningMode">
-                <div class="flashcard-wrapper">
+                <div class="flashcard-wrapper" id="swipeArea">
                     <div class="flashcard" id="cardAnimateTarget">
                         <div class="flashcard-inner" id="flashcardInner" onclick="flipCard()">
                             <div class="flashcard-face flashcard-front" id="flashcardFront"></div>
@@ -127,9 +135,7 @@
                         </div>
                     </div>
                 </div>
-                <div style="text-align:center; margin-bottom:10px;">
-                    <button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:250px;" onclick="toggleMastered()">⬜ まだ</button>
-                </div>
+                <div style="text-align:center; margin-bottom:10px;"><button id="masteredBtn" class="btn btn-outline" style="width:100%; max-width:250px;" onclick="toggleMastered()">⬜ まだ</button></div>
                 <div class="flashcard-controls">
                     <button class="btn btn-primary" onclick="prevCard()">←</button>
                     <button class="btn btn-primary" onclick="nextCard()">→</button>
@@ -141,16 +147,10 @@
 
             <div id="bulkEditMode" class="bulk-edit-area">
                 <div id="bulkList" style="max-height: 40vh; overflow-y: auto; margin-bottom: 10px;"></div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-success" style="flex:1;" onclick="saveBulkChanges()">💾 変更を保存</button>
-                    <button class="btn btn-outline" style="flex:1;" onclick="toggleBulkEdit()">戻る</button>
-                </div>
+                <div style="display:flex; gap:10px;"><button class="btn btn-success" style="flex:1;" onclick="saveBulkChanges()">💾 保存</button><button class="btn btn-outline" style="flex:1;" onclick="toggleBulkEdit()">戻る</button></div>
             </div>
 
-            <div id="emptyDeckMsg" style="display:none; text-align:center; padding:30px;">表示できるカードがありません。</div>
-
             <div id="addCardSection" style="background:#f7fafc; padding:15px; border-radius:16px; margin-top:20px; border: 1px solid #e2e8f0;">
-                <p style="font-size:0.85rem; font-weight:bold; margin-bottom:8px;">➕ 新規カード追加</p>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <input type="text" id="newQ" placeholder="問題" class="bulk-input">
                     <input type="text" id="newA" placeholder="回答" class="bulk-input">
@@ -162,24 +162,14 @@
     </div>
 
     <script>
-        const VERSION = "26.01.22.2000-overwrite-sync"; 
+        const VERSION = "26.01.22.2410-full-fix";
         let decks = {}, currentDeckId = null, currentCardIndex = 0, displayOrder = [];
         let isShuffleOn = false, isUnmasteredOnly = false, isAnimating = false;
+        let touchStartX = 0, touchEndX = 0, videoStream = null;
 
         window.addEventListener('load', () => {
             document.getElementById('versionTag').textContent = `Ver: ${VERSION}`;
-            loadDecks(); renderDecks();
-        });
-
-        // ショートカット
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('flashcardModal').style.display !== 'flex') return;
-            if (e.target.tagName === 'INPUT') return;
-            if (e.key === 'ArrowRight') nextCard();
-            if (e.key === 'ArrowLeft') prevCard();
-            if (e.key === ' ') { e.preventDefault(); flipCard(); }
-            if (e.key === 'm' || e.key === 'M') toggleMastered();
-            if (e.key === 'Escape') closeFlashcards();
+            loadDecks(); renderDecks(); setupSwipe();
         });
 
         function saveDecks() { localStorage.setItem('flashcard_decks', JSON.stringify(decks)); }
@@ -192,28 +182,28 @@
                 const masteredCount = deck.cards.filter(c => c.mastered).length;
                 const percent = Math.round((masteredCount / deck.cards.length) * 100) || 0;
                 const item = document.createElement('div'); item.className = 'deck-item';
-                item.innerHTML = `<div><div style="font-weight:bold;">${deck.name}</div><div style="font-size:0.8rem; color:#718096;">${deck.cards.length}枚 (${percent}%)</div><div class="progress-bar-container"><div style="background:#10b981; height:100%; width:${percent}%"></div></div></div><div style="display:flex; gap:5px;"><button class="btn btn-primary" onclick="openDeck('${id}')">学習</button><button class="btn btn-outline" style="color:#fc8181;" onclick="deleteDeck('${id}')">🗑️</button></div>`;
+                item.innerHTML = `<div><div style="font-weight:bold;">${deck.name}</div><div class="progress-bar-container"><div style="background:#10b981; height:100%; width:${percent}%"></div></div></div>
+                    <div style="display:flex; gap:5px;"><button class="btn btn-primary" onclick="openDeck('${id}')">学習</button><button class="btn btn-outline" onclick="resetProgress('${id}')">🔄</button><button class="btn btn-outline" style="color:#fc8181;" onclick="deleteDeck('${id}')">🗑️</button></div>`;
                 container.appendChild(item);
             });
         }
 
-        function openDeck(id) {
+        function openDeck(id) { 
             currentDeckId = id; currentCardIndex = 0; isShuffleOn = false; isUnmasteredOnly = false;
-            applyDisplayOrder();
-            document.getElementById('flashcardModal').style.display = 'flex';
+            applyDisplayOrder(); 
+            document.getElementById('flashcardModal').style.display = 'flex'; 
             document.getElementById('bulkEditMode').style.display = 'none';
             document.getElementById('addCardSection').style.display = 'block';
-            updateControlUI(); updateCard();
+            updateControlUI(); updateCard(); 
         }
 
         function applyDisplayOrder() {
             const deck = decks[currentDeckId];
             let indices = deck.cards.map((_, i) => i);
             if (isUnmasteredOnly) indices = indices.filter(i => !deck.cards[i].mastered);
-            if (isShuffleOn) {
+            if (isShuffleOn && indices.length > 0) {
                 for (let i = indices.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [indices[i], indices[j]] = [indices[j], indices[indices.length-1]]; // 簡易
                     [indices[i], indices[j]] = [indices[j], indices[i]];
                 }
             }
@@ -223,16 +213,9 @@
 
         function updateCard(anim = '') {
             const deck = decks[currentDeckId], target = document.getElementById('cardAnimateTarget');
-            if (displayOrder.length === 0) {
-                document.getElementById('learningMode').style.display = 'none';
-                document.getElementById('emptyDeckMsg').style.display = 'block';
-                document.getElementById('flashcardProgress').textContent = "0 / 0";
-                return;
-            }
+            if (displayOrder.length === 0) { document.getElementById('learningMode').style.display = 'none'; return; }
             document.getElementById('learningMode').style.display = 'block';
-            document.getElementById('emptyDeckMsg').style.display = 'none';
             if (anim) { target.classList.remove('slide-next', 'slide-prev'); void target.offsetWidth; target.classList.add(anim); }
-
             const card = deck.cards[displayOrder[currentCardIndex]];
             document.getElementById('flashcardFront').textContent = card.question;
             document.getElementById('flashcardBack').textContent = card.answer;
@@ -244,48 +227,44 @@
             document.getElementById('flashcardInner').style.transform = 'rotateY(0deg)';
         }
 
+        function setupSwipe() {
+            const area = document.getElementById('swipeArea');
+            area.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, false);
+            area.addEventListener('touchend', (e) => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); }, false);
+        }
+
+        function handleSwipe() {
+            const diff = touchEndX - touchStartX;
+            if (diff > 50) toggleMastered(); else if (diff < -50) nextCard();
+        }
+
         function toggleMastered() {
-            if (displayOrder.length === 0 || isAnimating) return;
+            if (isAnimating) return;
             const card = decks[currentDeckId].cards[displayOrder[currentCardIndex]];
             card.mastered = !card.mastered;
-            saveDecks(); renderDecks();
-            updateCard();
+            saveDecks(); renderDecks(); updateCard();
             if (card.mastered) {
                 isAnimating = true;
-                setTimeout(() => {
-                    isAnimating = false;
-                    if (isUnmasteredOnly) { applyDisplayOrder(); updateCard('slide-next'); }
-                    else { nextCard(); }
-                }, 400);
+                setTimeout(() => { isAnimating = false; isUnmasteredOnly ? (applyDisplayOrder(), updateCard('slide-next')) : nextCard(); }, 400);
             }
         }
 
         function nextCard() { if (currentCardIndex < displayOrder.length - 1) { currentCardIndex++; updateCard('slide-next'); } }
         function prevCard() { if (currentCardIndex > 0) { currentCardIndex--; updateCard('slide-prev'); } }
-        function flipCard() { if (displayOrder.length > 0) { const inner = document.getElementById('flashcardInner'); inner.style.transform = inner.style.transform === 'rotateY(180deg)' ? 'rotateY(0deg)' : 'rotateY(180deg)'; } }
-        function toggleShuffle() { isShuffleOn = !isShuffleOn; currentCardIndex = 0; applyDisplayOrder(); updateControlUI(); updateCard('slide-next'); }
-        function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; currentCardIndex = 0; applyDisplayOrder(); updateControlUI(); updateCard('slide-next'); }
+        function flipCard() { const inner = document.getElementById('flashcardInner'); inner.style.transform = inner.style.transform === 'rotateY(180deg)' ? 'rotateY(0deg)' : 'rotateY(180deg)'; }
+        function toggleShuffle() { isShuffleOn = !isShuffleOn; applyDisplayOrder(); updateControlUI(); updateCard('slide-next'); }
+        function toggleUnmasteredOnly() { isUnmasteredOnly = !isUnmasteredOnly; applyDisplayOrder(); updateControlUI(); updateCard('slide-next'); }
         function updateControlUI() {
             document.getElementById('shuffleBtn').className = isShuffleOn ? 'btn btn-active' : 'btn btn-outline';
             document.getElementById('unmasteredOnlyBtn').className = isUnmasteredOnly ? 'btn btn-active' : 'btn btn-outline';
         }
 
-        function addCard() {
-            const q = document.getElementById('newQ').value.trim(), a = document.getElementById('newA').value.trim();
-            if (!q || !a) return;
-            decks[currentDeckId].cards.push({question: q, answer: a, mastered: false});
-            saveDecks(); renderDecks();
-            applyDisplayOrder(); updateCard();
-            document.getElementById('newQ').value = ''; document.getElementById('newA').value = '';
-            showToast("追加しました");
-        }
-
+        // --- 一括編集 ---
         function toggleBulkEdit() {
             const l = document.getElementById('learningMode'), b = document.getElementById('bulkEditMode'), s = document.getElementById('addCardSection');
             if (b.style.display === 'none') { renderBulkList(); l.style.display = 'none'; s.style.display = 'none'; b.style.display = 'block'; }
             else { l.style.display = 'block'; s.style.display = 'block'; b.style.display = 'none'; }
         }
-
         function renderBulkList() {
             const container = document.getElementById('bulkList'); container.innerHTML = '';
             decks[currentDeckId].cards.forEach((c, i) => {
@@ -294,93 +273,75 @@
                 container.appendChild(row);
             });
         }
-
         function saveBulkChanges() {
             const qs = document.querySelectorAll('.bulk-input.q'), as = document.querySelectorAll('.bulk-input.a'), cards = [];
             qs.forEach((q, i) => { if (q.value.trim()) cards.push({ question: q.value.trim(), answer: as[i].value.trim(), mastered: false }); });
             decks[currentDeckId].cards = cards;
             saveDecks(); renderDecks(); applyDisplayOrder(); updateCard(); toggleBulkEdit();
-            showToast("保存しました");
+        }
+        function addCard() {
+            const q = document.getElementById('newQ').value.trim(), a = document.getElementById('newA').value.trim();
+            if (!q || !a) return;
+            decks[currentDeckId].cards.push({question: q, answer: a, mastered: false});
+            saveDecks(); renderDecks(); applyDisplayOrder(); updateCard();
+            document.getElementById('newQ').value = ''; document.getElementById('newA').value = '';
         }
 
-        function createNewDeck() {
-            const n = prompt("デッキ名:"); if (!n) return;
-            const id = 'deck_' + Date.now(); decks[id] = { name: n, cards: [] };
-            saveDecks(); renderDecks(); openDeck(id);
+        // --- QR機能 ---
+        function showQR() {
+            const deck = decks[currentDeckId];
+            const code = btoa(unescape(encodeURIComponent(`${deck.name}::${deck.cards.map(c => `${c.question}|${c.answer}`).join('~')}`)));
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: code, width: 256, height: 256 });
+            document.getElementById('qrDisplayModal').style.display = 'flex';
+        }
+        async function startCamera() {
+            document.getElementById('cameraModal').style.display = 'flex';
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            const v = document.getElementById('video'); v.srcObject = videoStream; v.play();
+            requestAnimationFrame(tick);
+        }
+        function stopCamera() { if (videoStream) videoStream.getTracks().forEach(t => t.stop()); document.getElementById('cameraModal').style.display = 'none'; }
+        function tick() {
+            const v = document.getElementById('video');
+            if (v.readyState === v.HAVE_ENOUGH_DATA) {
+                const c = document.getElementById('qr-canvas'); c.height = v.videoHeight; c.width = v.videoWidth;
+                const ctx = c.getContext("2d"); ctx.drawImage(v, 0, 0, c.width, c.height);
+                const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+                if (code) { processCode(code.data); stopCamera(); return; }
+            }
+            if (document.getElementById('cameraModal').style.display === 'flex') requestAnimationFrame(tick);
+        }
+        function processCode(data) {
+            try {
+                const decoded = decodeURIComponent(escape(atob(data)));
+                const [n, r] = decoded.split('::');
+                const cards = r.split('~').map(row => { const [q, a] = row.split('|'); return { question: q, answer: a, mastered: false }; });
+                decks['deck_'+Date.now()] = { name: n + " (QR)", cards: cards };
+                saveDecks(); renderDecks(); showToast("追加完了");
+            } catch (e) { alert("無効なQR"); }
         }
 
-        function deleteDeck(id) { if(confirm('削除しますか？')) { delete decks[id]; saveDecks(); renderDecks(); } }
+        function createNewDeck() { const n = prompt("デッキ名:"); if (n) { decks['deck_'+Date.now()]={name:n,cards:[]}; saveDecks(); renderDecks(); } }
+        function deleteDeck(id) { if(confirm('削除？')) { delete decks[id]; saveDecks(); renderDecks(); } }
+        function resetProgress(id) { if(confirm('リセット？')) { decks[id].cards.forEach(c=>c.mastered=false); saveDecks(); renderDecks(); } }
         function closeFlashcards() { document.getElementById('flashcardModal').style.display = 'none'; }
         function showToast(m) { const t = document.getElementById("toast"); t.textContent = m; t.className = "show"; setTimeout(() => t.className = "", 2000); }
 
-        // ファイル読込 & 進捗バー
-        // ファイル読込 & 進捗バー（同名デッキ上書き対応版）
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-        const file = e.target.files[0]; 
-        if(!file) return;
-
-        const overlay = document.getElementById('progressOverlay'), 
-              bar = document.getElementById('progressBar'), 
-            txt = document.getElementById('progressText');
-    
-        overlay.style.display = 'flex';
-    
-        const reader = new FileReader();
-        reader.onprogress = (ev) => { 
-            if (ev.lengthComputable) { 
-                const p = Math.round((ev.loaded / ev.total) * 70); 
-                bar.style.width = p + '%'; 
-                txt.textContent = `読込中... ${p}%`; 
-            } 
-        };
-
-        reader.onload = (ev) => {
-            bar.style.width = '90%'; 
-            txt.textContent = '解析中... 90%';
-        
-            setTimeout(() => {
-                const data = new Uint8Array(ev.target.result), 
-                    wb = XLSX.read(data, {type: 'array'}), 
-                    sheet = wb.Sheets[wb.SheetNames[0]], 
-                    json = XLSX.utils.sheet_to_json(sheet, {header: 1});
-            
-                const newCards = json.slice(1).filter(r => r[0] && r[1]).map(r => ({
-                    question: String(r[0]), 
-                    answer: String(r[1]), 
-                    mastered: false
-                }));
-
-                const fileNameNoExt = file.name.replace(/\.[^/.]+$/, '');
-            
-            // --- 上書きロジックの追加 ---
-            // 既存のデッキの中に、同じ名前のものがあるか探す
-                const existingDeckId = Object.keys(decks).find(id => decks[id].name === fileNameNoExt);
-
-                if (existingDeckId) {
-                // 同じ名前があれば、そのIDのカードデータを差し替える（上書き）
-                    decks[existingDeckId].cards = newCards;
-                    showToast(`デッキ「${fileNameNoExt}」を更新しました`);
-                } else {
-                // なければ新規作成
-                    const id = 'deck_' + Date.now(); 
-                    decks[id] = { name: fileNameNoExt, cards: newCards };
-                    showToast("新しいデッキを追加しました");
-                }
-            // --------------------------
-            
-                saveDecks(); 
-                renderDecks();
-            
-                bar.style.width = '100%'; 
-                txt.textContent = '完了！ 100%';
-            
-                e.target.value = ''; // 次回も同じファイルを選べるようにリセット
-
-                setTimeout(() => overlay.style.display = 'none', 500);
-            }, 100);
-        };
-        reader.readAsArrayBuffer(file);
-    });
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const wb = XLSX.read(new Uint8Array(ev.target.result), {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
+                const newCards = json.slice(1).filter(r => r[0] && r[1]).map(r => ({question: String(r[0]), answer: String(r[1]), mastered: false}));
+                const name = file.name.replace(/\.[^/.]+$/, '');
+                const eid = Object.keys(decks).find(id => decks[id].name === name);
+                if (eid) decks[eid].cards = newCards; else decks['deck_'+Date.now()] = { name: name, cards: newCards };
+                saveDecks(); renderDecks(); e.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        });
     </script>
 </body>
 </html>
