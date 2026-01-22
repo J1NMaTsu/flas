@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#667eea">
-    <title>フラッシュカード Pro</title>
+    <title>フラッシュカード Pro完全版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -429,7 +429,7 @@
                 <button onclick="setTheme('forest')" style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
             
-            <p>効率的な学習のための完全版 v26.1.22.2046</p>
+            <p>効率的な学習のための完全版 v26.1.23.015.test</p>
         </div>
 
         <div class="content">
@@ -729,8 +729,7 @@
         function renderSlider() {
                 const track = document.getElementById('sliderTrack');
 
-                // --- 【iPhone安定化修正】メモリ解放 ---
-                // 前のカード要素を物理的に削除し、ブラウザのメモリを強制的に空けます
+                // メモリ解放
                 while (track.firstChild) {
                     track.removeChild(track.firstChild);
                 }
@@ -741,36 +740,60 @@
                     return;
                 }
 
-                // --- 【負荷軽減】現在のカードとその前後だけを作る ---
-                // すべてのカードを一気に作るとiPhoneがパンクするため
+                // 空のスロットを作成
                 displayOrder.forEach(function (originalIdx, i) {
-                    const cardData = decks[currentDeckId].cards[originalIdx];
                     const slot = document.createElement('div');
                     slot.className = 'card-slot';
-
-                    // 描画負荷を下げるため、構造をシンプルに維持
-                    slot.innerHTML = `
-    <div class="flashcard-wrapper">
-        <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
-            <div class="flashcard-face flashcard-front">${cardData.question}</div>
-            
-            <div class="flashcard-face flashcard-back" style="flex-direction: column; justify-content: center;">
-                <div style="flex-grow: 1; display: flex; align-items: center;">${cardData.answer}</div>
-                
-                ${cardData.comment ? `
-                <div style="width: 100%; font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 12px; font-weight: normal; text-align: left; margin-bottom: 5px; line-height: 1.4;">
-                    <div style="font-size: 0.6rem; opacity: 0.7; margin-bottom: 2px;">💡 コメント</div>
-                    ${cardData.comment}
-                </div>` : ''}
-            </div>
-        </div>
-    </div>
-`;
+                    slot.id = `slot-${i}`;
                     track.appendChild(slot);
                 });
 
+                if (typeof updateVisibleCards === "function") {
+                    updateVisibleCards();
+                }
+
                 updateSlider(false);
-            }
+        }
+
+    // 現在のカードとその前後だけを実体化し、遠くのカードは中身を消す関数
+        function updateVisibleCards() {
+            const range = 1; // 前後何枚まで保持するか
+            displayOrder.forEach(function (originalIdx, i) {
+                const slot = document.getElementById(`slot-${i}`);
+                if (!slot) return;
+
+                // 現在の表示位置に近いカードだけ中身を作る
+                if (i >= currentCardIndex - range && i <= currentCardIndex + range) {
+                    if (slot.innerHTML === "") { // まだ中身がなければ作成
+                        const cardData = decks[currentDeckId].cards[originalIdx];
+                        slot.innerHTML = `
+                    <div class="flashcard-wrapper">
+                        <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
+                            <div class="flashcard-face flashcard-front">${cardData.question}</div>
+                            <div class="flashcard-face flashcard-back" style="flex-direction: column; justify-content: center;">
+                                <div style="flex-grow: 1; display: flex; align-items: center;">${cardData.answer}</div>
+                                ${cardData.comment ? `
+                                <div style="width: 100%; font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 12px; font-weight: normal; text-align: left; margin-bottom: 5px; line-height: 1.4;">
+                                    <div style="font-size: 0.6rem; opacity: 0.7; margin-bottom: 2px;">💡 メモ・コメント（自動保存）</div>
+                                    <textarea
+                                        style="width: 100%; background: transparent; border: 1px dashed rgba(0,0,0,0.2); font-size: 0.8rem; font-family: inherit;"
+                                        onpointerdown="event.stopPropagation(); this.focus();"
+                                        onmousedown="event.stopPropagation(); this.focus();"
+                                        onclick="event.stopPropagation(); this.focus();"
+                                        onchange="updateCardComment(${originalIdx}, this.value)"
+                                        placeholder="補足メモを入力..."
+                                    >${cardData.comment || ''}</textarea>
+                                </div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                    }
+                } else {
+                    // 範囲外のカードは中身を空にしてメモリを解放する
+                    slot.innerHTML = "";
+                }
+            });
+        }    
 
         // --- タッチ・スワイプ・タップ判定 ---
         const viewport = document.getElementById('sliderViewport');
@@ -815,18 +838,22 @@
         });
 
         function updateSlider(animate) {
-            isTransitioning = true;
-            const track = document.getElementById('sliderTrack');
-            
-            // 移動時にすべてのカードをリセット
-            const allInners = document.querySelectorAll('.flashcard-inner');
-            allInners.forEach(function(inner) { inner.style.transform = 'rotateY(0deg)'; });
+                isTransitioning = true;
+                const track = document.getElementById('sliderTrack');
 
-            track.style.transition = animate === false ? "none" : "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-            track.style.transform = "translateX(-" + (currentCardIndex * 100) + "%)";
-            
-            setTimeout(function() { isTransitioning = false; }, 500);
-            updateCardInfo();
+                // 移動する前に、移動先のカードを実体化させる
+                if (typeof updateVisibleCards === "function") {
+                    updateVisibleCards();
+                }
+
+                track.style.transition = animate === false ? "none" : "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+                track.style.transform = "translateX(-" + (currentCardIndex * 100) + "%)";
+
+                setTimeout(function () {
+                    isTransitioning = false;
+                }, 500);
+
+                updateCardInfo();
         }
 
         function nextCard() {
@@ -979,7 +1006,7 @@
                 if (card.mastered) {
                     isTransitioning = true;
                     // 0.5秒待機
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 300));
                     isTransitioning = false;
                     nextCard(); // 自動で次のカードへ
                 }
@@ -1338,4 +1365,3 @@
     </script>
 </body>
 </html>
-
