@@ -327,7 +327,7 @@
     <div class="container">
         <div class="header">
             <h1>🃏 フラッシュカード Pro</h1>
-            <p>効率的な学習のための完全版　スワイプを修正</p>
+            <p>効率的な学習のための完全版 v26.1.22.141.qr</p>
         </div>
 
         <div class="content">
@@ -712,14 +712,44 @@
             reader.readAsArrayBuffer(file);
         });
 
+        // --- QRコード表示のメイン処理 ---
         function showQR() {
+    // 1. 現在のデッキデータを取得
             const deck = decks[currentDeckId];
-            const raw = deck.name + "::" + deck.cards.map(c => c.question + "|" + c.answer).join("~");
-            const encoded = btoa(unescape(encodeURIComponent(raw)));
-            const container = document.getElementById('qrcode');
-            container.innerHTML = "";
-            new QRCode(container, { text: encoded, width: 256, height: 256 });
-            document.getElementById('qrDisplayModal').style.display = 'flex';
+            if (!deck || deck.cards.length === 0) {
+                showToast("データがないためQRを作成できません");
+                return;
+            }
+
+    // 2. データを文字列化 (名前::問題1|答え1~問題2|答え2...)
+            const rawString = deck.name + "::" + deck.cards.map(function(c) {
+                return c.question + "|" + c.answer;
+            }).join("~");
+
+    // 3. Base64エンコード (日本語対応のためunescape/encodeURIComponentを使用)
+            const encodedData = btoa(unescape(encodeURIComponent(rawString)));
+
+    // 4. 表示用コンテナを取得して中身をクリア
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = "";
+
+    // 5. ライブラリを使用してQR生成
+            try {
+                new QRCode(qrContainer, {
+                    text: encodedData,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+        // 6. モーダルを表示
+                document.getElementById('qrDisplayModal').style.display = 'flex';
+            } catch (err) {
+                console.error("QR生成エラー:", err);
+                alert("QRコードの生成に失敗しました。データ量が多すぎる可能性があります。");
+            }
         }
 
         async function startCamera() {
