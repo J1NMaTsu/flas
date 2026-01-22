@@ -2,6 +2,8 @@ const CACHE_NAME = 'flashcard-app-v1';
 const urlsToCache = [
   './index.html',
   './manifest.json',
+  './icon-192.png', // 追加
+  './icon-512.png', // 追加
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js'
 ];
