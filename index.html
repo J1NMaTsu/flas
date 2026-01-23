@@ -502,7 +502,7 @@
                     style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
 
-            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.1.2</p>
+            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.1.3</p>
         </div>
 
         <div class="content">
@@ -514,11 +514,11 @@
                         onclick="document.getElementById('fileInput').click()">
                         📁 Excelから読み込み
                     </button>
-                    <p>複数ファイルの一括取り込みに対応</p>
+                    <p>.xlsx,.xls</p>
                 </div>
             
                 <div style="grid-column: span 2; display: flex; gap: 8px;">
-                    <button class="btn btn-success" style="flex: 2;" onclick="createNewDeck()">➕ 新規デッキ</button>
+                    <button class="btn btn-success" style="flex: 2;" onclick="createNewDeck()">新規デッキ</button>
                     <button class="btn btn-outline" style="flex: 0.5;" onclick="exportAllData()" title="保存">📤</button>
                     <button class="btn btn-outline" style="flex: 0.5;" onclick="document.getElementById('importFile').click()"
                         title="復元">📥</button>
@@ -527,10 +527,10 @@
             
                 <div style="grid-column: span 2; display: flex; gap: 8px;">
                     <button class="btn btn-outline" style="flex: 1;" onclick="importFromText()">
-                        📝 テキスト読込
+                        テキスト読込
                     </button>
                     <button class="btn btn-outline" style="flex: 1;" onclick="startCamera()">
-                        📷 QR読込
+                        QR読込
                     </button>
                 </div>
             </div>
@@ -541,7 +541,7 @@
             <div class="credit-container">
                 <span class="credit-toggle" onclick="toggleCredit()">© クレジットを表示</span>
                 <div id="creditContent" class="credit-content" style="font-family: -apple-system, sans-serif;">
-                    <p style="margin-bottom: 8px; font-weight: bold; color: #555;">Designed in Japan</p>
+                    <p style="margin-bottom: 8px; font-weight: bold; color: #555;">Designed in Japan<br> 2025.01.21</p>
 
                     <div style="margin: 10px 0; color: #999;">
                     制作: 松崎仁<br>
@@ -587,7 +587,7 @@
                 <button id="focusModeBtn" class="btn btn-outline" onclick="toggleFocusMode()">👁️</button>
                 <button class="btn btn-outline focus-hide" onclick="showQR()">QR</button>
                 <button class="btn btn-outline focus-hide" onclick="copyDeckAsText()">📋</button>
-                <button class="btn btn-danger" onclick="closeFlashcards()">✕ 終了</button>
+                <button class="btn btn-danger" onclick="closeFlashcards()">✕</button>
             </div>
         </div>
         
@@ -626,7 +626,7 @@
 
                 <button id="masteredBtn" class="btn btn-outline" style="flex-grow: 1; max-width: 340px; height: 50px;"
                     onclick="toggleMastered()">
-                    ⬜ まだ習得していない
+                    ⬜ 未習得
                 </button>
             </div>
             <div class="focus-hide" style="display:flex; justify-content:center; gap:12px; margin-top:10px;">
@@ -635,9 +635,9 @@
                     Q→A
                 </button>
                 <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯
-                    未習得のみ</button>
+                    </button>
                 <button class="btn btn-outline" onclick="toggleBulkEdit()">📝</button>
-                <button id="repeatBtn" class="btn btn-outline" onclick="toggleRepeat()">🔁: OFF</button>
+                <button id="repeatBtn" class="btn btn-outline" onclick="toggleRepeat()">🔁</button>
             </div>
         </div>
     </div>
@@ -742,7 +742,7 @@
 
             favDiv.innerHTML = `
         <div class="deck-info">
-            <b style="color: #d4af37;">🌟 お気に入りフォルダ</b>
+            <b style="color: #d4af37;">🌟 お気に入り</b>
             <small>${allFavCards.length} 枚のカード</small>
         </div>
         <div class="deck-btns">
@@ -1087,7 +1087,7 @@
 
             // --- 4. 習得ボタンの状態更新 ---
             const mBtn = document.getElementById('masteredBtn');
-            mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ まだ習得していない';
+            mBtn.textContent = card.mastered ? '✅ 習得済み' : '⬜ 未習得';
             // デザインを統一するため既存のクラスを動的に切り替え
             mBtn.style.borderColor = card.mastered ? '#48bb78' : '#e2e8f0';
             mBtn.style.color = card.mastered ? '#48bb78' : '#4a5568';
@@ -1344,7 +1344,7 @@
             isRepeatOn = !isRepeatOn;
             const btn = document.getElementById('repeatBtn');
             if (btn) {
-                btn.textContent = isRepeatOn ? "🔁 リピート: ON" : "🔁 リピート: OFF";
+                btn.textContent = isRepeatOn ? "🔁" : "🔁";
                 btn.className = isRepeatOn ? "btn btn-active" : "btn btn-outline";
             }
         }
