@@ -206,6 +206,7 @@
             background: #edf2f7;
             z-index: 1000;
             flex-direction: column;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -501,7 +502,7 @@
                     style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
 
-            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.1</p>
+            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.1.2</p>
         </div>
 
         <div class="content">
@@ -548,7 +549,7 @@
                     協力: Gemini / ChatGPT / Claude<br>
                     </div>
                     <div style="margin: 8px 0; font-size: 0.75rem; color: #999;">
-                        Special Thanks: 中谷壮 / 東中彬裕
+                        Special Thanks: 中谷壮 / 東中彬裕 / 伊藤謙
                     </div>
                     <p style="font-size: 0.75rem; color: #666; margin-top: 10px; line-height: 1.4;">
                         初期開発における多大な貢献に感謝し、<br>
@@ -566,6 +567,7 @@
     </div>
 
     <div class="flashcard-modal" id="flashcardModal">
+        
         <div class="modal-header">
             <div class="progress-container focus-hide">
                 <div class="circle-wrapper">
@@ -578,14 +580,7 @@
                 
 
                 <div id="masteredCountText">0/0</div>
-                <div id="timerDisplay"
-                    style="font-family: monospace; font-size: 1.1rem; font-weight: bold; color: #4a5568; margin: 0 15px;">00:00</div>
-                    <div style="display: flex; gap: 5px; align-items: center;">
-                        <button id="timerControlBtn" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem; min-width: 65px;"
-                            onclick="toggleTimer()">start</button>
-                        <button id="timerResetBtn" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem;"
-                            onclick="resetTimer()">reset</button>
-                    </div>
+                
             </div>
 
             <div style="display:flex; gap:8px;">
@@ -595,9 +590,25 @@
                 <button class="btn btn-danger" onclick="closeFlashcards()">✕ 終了</button>
             </div>
         </div>
+        
 
         <div style="width:100%; height:6px; background:#e2e8f0;">
             <div id="linearProgressBar" style="height:100%; width:0%; background:#667eea; transition:width 0.3s ease;">
+            </div>
+        </div>
+        <div id="externalTimer"
+            style="padding: 15px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; background: transparent;">
+            <div id="timerDisplay"
+                style="font-family: monospace; font-size: 1.5rem; font-weight: bold; color: #4a5568; letter-spacing: 2px;">
+                00:00
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="timerControlBtn" class="btn btn-outline"
+                    style="padding: 5px 12px; font-size: 0.75rem; background: white; border-radius: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); min-width: 65px;"
+                    onclick="toggleTimer()">start</button>
+                <button id="timerResetBtn" class="btn btn-outline"
+                    style="padding: 5px 12px; font-size: 0.75rem; background: white; border-radius: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
+                    onclick="resetTimer()">reset</button>
             </div>
         </div>
 
@@ -1532,7 +1543,7 @@
                     btn.style.color = "white";
                 } else {
                     stopTimer(); // タイマー停止
-                    btn.textContent = "再開";
+                    btn.textContent = "▶";
                     btn.style.background = "white"; // 元の色に戻す
                     btn.style.color = "#4a5568";
                 }
@@ -1551,7 +1562,7 @@
                 btn.style.color = "#4a5568";
             }
 
-            
+
     </script>
 </body>
 
