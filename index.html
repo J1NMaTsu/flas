@@ -501,7 +501,7 @@
                     style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
 
-            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease</p>
+            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.1</p>
         </div>
 
         <div class="content">
@@ -575,8 +575,17 @@
                     </svg>
                     <div id="progressPercentText">0%</div>
                 </div>
+                
 
                 <div id="masteredCountText">0/0</div>
+                <div id="timerDisplay"
+                    style="font-family: monospace; font-size: 1.1rem; font-weight: bold; color: #4a5568; margin: 0 15px;">00:00</div>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button id="timerControlBtn" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem; min-width: 65px;"
+                            onclick="toggleTimer()">start</button>
+                        <button id="timerResetBtn" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem;"
+                            onclick="resetTimer()">reset</button>
+                    </div>
             </div>
 
             <div style="display:flex; gap:8px;">
@@ -611,6 +620,9 @@
             </div>
             <div class="focus-hide" style="display:flex; justify-content:center; gap:12px; margin-top:10px;">
                 <button id="shuffleBtn" class="btn btn-outline" onclick="toggleShuffle()">🔀</button>
+                <button id="reverseModeBtn" class="btn btn-outline" onclick="toggleReverseMode()">
+                    Q→A
+                </button>
                 <button id="unmasteredOnlyBtn" class="btn btn-outline" onclick="toggleUnmasteredOnly()">🎯
                     未習得のみ</button>
                 <button class="btn btn-outline" onclick="toggleBulkEdit()">📝</button>
@@ -660,6 +672,7 @@
         let isRepeatOn = false;
         // --- データ管理変数の初期化 ---
         let decks = {};
+        let isReverseMode = false; // false = 通常、true = 答えが先
         let currentDeckId = null;
         let currentCardIndex = 0;
         let displayOrder = [];
@@ -672,6 +685,10 @@
         // スワイプ判定用変数
         let touchStartX = 0;
         let touchEndX = 0;
+
+        let timerInterval = null;
+        let startTime = 0;
+        let elapsedTime = 0;
 
         window.addEventListener('load', function () {
             const savedData = localStorage.getItem('flashcard_decks_v2');
@@ -857,7 +874,9 @@
 
             updateSlider(false);
         }
+        
 
+        // 現在のカードとその前後だけを実体化し、遠くのカードは中身を消す関数
         // 現在のカードとその前後だけを実体化し、遠くのカードは中身を消す関数
         function updateVisibleCards() {
             const range = 1; // 前後何枚まで保持するか
@@ -869,21 +888,25 @@
                 if (i >= currentCardIndex - range && i <= currentCardIndex + range) {
                     if (slot.innerHTML === "") { // まだ中身がなければ作成
                         const cardData = decks[currentDeckId].cards[originalIdx];
+                        
+                        // ★ここが修正ポイント：モードによって表裏を切り替える★
+                        const frontText = isReverseMode ? cardData.answer : cardData.question;
+                        const backText = isReverseMode ? cardData.question : cardData.answer;
+
                         slot.innerHTML = `
-                    <div class="flashcard-wrapper">
                         <div class="flashcard-wrapper">
-                        <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
-                            <div class="flashcard-face flashcard-front">${cardData.question}</div>
-                            <div class="flashcard-face flashcard-back" style="flex-direction: column; justify-content: center;">
-                                <div style="flex-grow: 1; display: flex; align-items: center;">${cardData.answer}</div>
-                                ${cardData.comment ? `
-                                <div style="width: 100%; margin-top: 15px; padding: 12px; background: rgba(0, 0, 0, 0.15); border-radius: 10px; text-align: left; font-weight: normal;">
-                                    <div style="font-size: 0.7rem; opacity: 0.7; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 3px; color: #fff;">💡コメント</div>
-                                    <div style="font-size: 0.85rem; color: #fff; line-height: 1.4; white-space: pre-wrap;">${cardData.comment}</div>
-                                </div>` : ''}
+                            <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
+                                <div class="flashcard-face flashcard-front">${frontText}</div>
+                                <div class="flashcard-face flashcard-back" style="flex-direction: column; justify-content: center;">
+                                    <div style="flex-grow: 1; display: flex; align-items: center;">${backText}</div>
+                                    ${cardData.comment ? `
+                                    <div style="width: 100%; margin-top: 15px; padding: 12px; background: rgba(0, 0, 0, 0.15); border-radius: 10px; text-align: left; font-weight: normal;">
+                                        <div style="font-size: 0.7rem; opacity: 0.7; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 3px; color: #fff;">💡コメント</div>
+                                        <div style="font-size: 0.85rem; color: #fff; line-height: 1.4; white-space: pre-wrap;">${cardData.comment}</div>
+                                    </div>` : ''}
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
+                        </div>`;
                     }
                 } else {
                     // 範囲外のカードは中身を空にしてメモリを解放する
@@ -995,6 +1018,24 @@
             if (!inner) return;
             inner.style.transform = inner.style.transform.includes('180deg') ? 'rotateY(0deg)' : 'rotateY(180deg)';
         }
+        function toggleReverseMode() {
+                isReverseMode = !isReverseMode;
+
+                // --- ここが重要：表示を強制的に消して作り直させる ---
+                displayOrder.forEach((_, i) => {
+                    const slot = document.getElementById(`slot-${i}`);
+                    if (slot) slot.innerHTML = ""; // 一旦中身を空っぽにする
+                });
+
+                // そのあとですぐに再描画
+                updateVisibleCards();
+
+                // ボタンの文字を変える
+                const btn = document.getElementById('reverseModeBtn');
+                if (btn) {
+                    btn.textContent = isReverseMode ? "A→Q" : "Q→A";
+                }
+            }
 
         function updateCardInfo() {
             if (displayOrder.length === 0) return;
@@ -1459,6 +1500,58 @@
             // 4. 学習画面のタイトルを調整
             document.getElementById('modalTitle').textContent = "🌟 お気に入り学習";
         }
+
+        function startTimer() {
+                if (timerInterval) return; // 二重起動防止
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(() => {
+                    elapsedTime = Date.now() - startTime;
+                    updateTimerDisplay();
+                }, 1000);
+        }
+
+        function stopTimer() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+        }
+
+        function updateTimerDisplay() {
+                const totalSeconds = Math.floor(elapsedTime / 1000);
+                const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+                const s = (totalSeconds % 60).toString().padStart(2, '0');
+                document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+        }
+        
+        // タイマーの開始と停止を切り替える
+            function toggleTimer() {
+                const btn = document.getElementById('timerControlBtn');
+                if (!timerInterval) {
+                    startTimer(); // タイマー開始
+                    btn.textContent = "⏹";
+                    btn.style.background = "#fc8181"; // 赤色に変更
+                    btn.style.color = "white";
+                } else {
+                    stopTimer(); // タイマー停止
+                    btn.textContent = "再開";
+                    btn.style.background = "white"; // 元の色に戻す
+                    btn.style.color = "#4a5568";
+                }
+            }
+
+            // タイマーを00:00に戻す
+            function resetTimer() {
+                stopTimer(); // 止めてからリセット
+                elapsedTime = 0;
+                updateTimerDisplay(); // 表示を00:00にする
+
+                // ボタンの表示も「スタート」に戻す
+                const btn = document.getElementById('timerControlBtn');
+                btn.textContent = "▶";
+                btn.style.background = "white";
+                btn.style.color = "#4a5568";
+            }
+
+            
     </script>
 </body>
 
