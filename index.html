@@ -540,7 +540,7 @@
             <div class="credit-container">
                 <span class="credit-toggle" onclick="toggleCredit()">© クレジットを表示</span>
                 <div id="creditContent" class="credit-content" style="font-family: -apple-system, sans-serif;">
-                    <p style="margin-bottom: 8px; font-weight: bold; color: #555;">Designed by Your Name in Japan</p>
+                    <p style="margin-bottom: 8px; font-weight: bold; color: #555;">Designed in Japan</p>
 
                     <div style="margin: 10px 0; color: #999;">
                     制作: 松崎仁<br>
@@ -871,21 +871,15 @@
                         const cardData = decks[currentDeckId].cards[originalIdx];
                         slot.innerHTML = `
                     <div class="flashcard-wrapper">
+                        <div class="flashcard-wrapper">
                         <div class="flashcard-inner" id="inner-${i}" style="transform: rotateY(0deg); will-change: transform;">
                             <div class="flashcard-face flashcard-front">${cardData.question}</div>
                             <div class="flashcard-face flashcard-back" style="flex-direction: column; justify-content: center;">
                                 <div style="flex-grow: 1; display: flex; align-items: center;">${cardData.answer}</div>
                                 ${cardData.comment ? `
-                                <div style="width: 100%; font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 12px; font-weight: normal; text-align: left; margin-bottom: 5px; line-height: 1.4;">
-                                    <div style="font-size: 0.6rem; opacity: 0.7; margin-bottom: 2px;">💡 メモ・コメント（自動保存）</div>
-                                    <textarea
-                                        style="width: 100%; background: transparent; border: 1px dashed rgba(0,0,0,0.2); font-size: 0.8rem; font-family: inherit;"
-                                        onpointerdown="event.stopPropagation(); this.focus();"
-                                        onmousedown="event.stopPropagation(); this.focus();"
-                                        onclick="event.stopPropagation(); this.focus();"
-                                        onchange="updateCardComment(${originalIdx}, this.value)"
-                                        placeholder="補足メモを入力..."
-                                    >${cardData.comment || ''}</textarea>
+                                <div style="width: 100%; margin-top: 15px; padding: 12px; background: rgba(0, 0, 0, 0.15); border-radius: 10px; text-align: left; font-weight: normal;">
+                                    <div style="font-size: 0.7rem; opacity: 0.7; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 3px; color: #fff;">💡コメント</div>
+                                    <div style="font-size: 0.85rem; color: #fff; line-height: 1.4; white-space: pre-wrap;">${cardData.comment}</div>
                                 </div>` : ''}
                             </div>
                         </div>
