@@ -502,7 +502,7 @@
                     style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
 
-            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.1.3</p>
+            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.2</p>
         </div>
 
         <div class="content">
@@ -779,6 +779,7 @@
             </div>
             <div class="deck-btns">
                 <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
+                <button class="btn btn-outline" onclick="exportSingleDeck('${id}')" title="Excel出力">📥</button>
                 <button class="btn btn-outline" onclick="resetDeckProgress('${id}')">🔄</button>
                 <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
             </div>
@@ -1561,6 +1562,35 @@
                 btn.style.background = "white";
                 btn.style.color = "#4a5568";
             }
+
+            function exportSingleDeck(id) {
+                    const deck = decks[id];
+                    if (!deck || deck.cards.length === 0) {
+                        showToast("カードがありません");
+                        return;
+                    }
+
+                    // 見出し行を入れず、データのみの配列を作成
+                    // A:問題, B:解答, C:習得状況, D:補足(コメント)
+                    const data = deck.cards.map(card => [
+                        card.question,
+                        card.answer,
+                        card.mastered ? "1" : "",
+                        card.comment || ""
+                    ]);
+
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+
+                    // 列幅の調整
+                    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 10 }, { wch: 40 }];
+
+                    XLSX.utils.book_append_sheet(wb, ws, "Cards");
+                    const fileName = deck.name.replace(/[\\/:*?"<>|]/g, "") + ".xlsx";
+                    XLSX.writeFile(wb, fileName);
+
+                    showToast("習得状況を含めて保存しました");
+                }
 
 
     </script>
