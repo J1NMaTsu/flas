@@ -18,6 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -483,6 +484,55 @@
             text-decoration: underline;
             user-select: none;
         }
+        
+        /* --- 修正：ぬるっと出る正方形ボタンメニュー --- */
+        .deck-menu-container {
+            position: relative;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .sub-menu {
+    /* ぬるっとさせるための設定 */
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* ぬるっと動く */
+    
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px); /* 背景をぼかすとおしゃれ */
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 100;
+    
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sub-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0); /* 定位置に滑り込む */
+        }
+
+/* 正方形ボタンの設定 */
+        .btn-square {
+            width: 45px !important;
+            height: 45px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem !important;
+            border-radius: 12px !important;
+        }
     </style>
 </head>
 
@@ -502,7 +552,7 @@
                     style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #66bb6a, #43a047); border: 2px solid white; cursor: pointer;"></button>
             </div>
 
-            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.2</p>
+            <p class="apple-neon">スマート。ミニマル。そして、パワフル。 </p><br><p>v1.1.-1.prerelease.2.1</p>
         </div>
 
         <div class="content">
@@ -764,6 +814,7 @@
             }
 
             // 各デッキを生成
+            // --- 修正：デッキ一覧の表示部分 ---
             keys.forEach(function (id) {
                 const deck = decks[id];
                 const masteredCount = deck.cards.filter(function (c) { return c.mastered; }).length;
@@ -773,17 +824,23 @@
                 const div = document.createElement('div');
                 div.className = 'deck-item';
                 div.innerHTML = `
-            <div class="deck-info">
-                <b>${deck.name}</b>
-                <small>${masteredCount} / ${totalCount} 枚習得 (${percent}%)</small>
+        <div class="deck-info">
+            <b>${deck.name}</b>
+            <small>${masteredCount} / ${totalCount} 枚 (${percent}%)</small>
+        </div>
+        <div class="deck-menu-container">
+            <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
+            <button class="btn btn-outline btn-square" onclick="toggleMenu(event, '${id}')">⋯</button>
+            
+            <div id="menu-${id}" class="sub-menu">
+                <button class="btn btn-outline btn-square" style="font-size: 0.8rem;" onclick="currentDeckId='${id}'; showQR()">QR</button>
+                <button class="btn btn-outline btn-square" style="font-size: 0.7rem;" onclick="currentDeckId='${id}'; copyDeckAsText()">📋</button>
+                <button class="btn btn-outline btn-square" onclick="exportSingleDeck('${id}')">📤</button>
+                <button class="btn btn-outline btn-square" onclick="resetDeckProgress('${id}')">🔄</button>
+                <button class="btn btn-danger btn-square" onclick="deleteDeck('${id}')">🗑️</button>
             </div>
-            <div class="deck-btns">
-                <button class="btn btn-primary" onclick="openDeck('${id}')">学習</button>
-                <button class="btn btn-outline" onclick="exportSingleDeck('${id}')" title="Excel出力">📥</button>
-                <button class="btn btn-outline" onclick="resetDeckProgress('${id}')">🔄</button>
-                <button class="btn btn-outline" onclick="deleteDeck('${id}')">🗑️</button>
-            </div>
-        `;
+        </div>
+    `;
                 container.appendChild(div);
             });
         }
@@ -824,20 +881,46 @@
         }
 
         function processRawData(encodedData) {
-            try {
-                const decoded = decodeURIComponent(escape(atob(encodedData)));
-                const parts = decoded.split('::');
-                const name = parts[0];
-                const rowsRaw = parts[1];
-                const cards = rowsRaw.split('~').map(function (row) {
-                    const pair = row.split('|');
-                    return { question: pair[0], answer: pair[1], mastered: false };
-                });
-                const id = Date.now().toString();
-                decks[id] = { name: name + "(共有)", cards: cards };
-                saveToLocal(); renderDecks(); showToast("取り込み完了");
-            } catch (e) { alert("形式エラー"); }
+    try {
+        // ★修正箇所：LZ-stringで解凍する (atobなどの代わり)
+        const decoded = LZString.decompressFromEncodedURIComponent(encodedData);
+        
+        // 解凍に失敗した（データが壊れている）場合のチェック
+        if (!decoded) {
+            throw new Error("解凍失敗");
         }
+
+        const parts = decoded.split('::');
+        const name = parts[0];
+        const rowsRaw = parts[1];
+
+        const cards = rowsRaw.split('~').map(function (row) {
+            const pair = row.split('|');
+            return { 
+                question: pair[0], 
+                answer: pair[1], 
+                mastered: false,
+                favorite: false // お気に入りフラグも初期化しておくと安心
+            };
+        });
+
+        // デッキとして保存
+        const id = Date.now().toString();
+        decks[id] = { name: name + "(共有)", cards: cards };
+        
+        saveToLocal(); 
+        renderDecks(); 
+        showToast("QRから取り込みました！");
+        
+        // モーダルが開いていれば閉じる（カメラ停止のため）
+        if (typeof stopScan === 'function') stopScan();
+        document.getElementById('qrModal').style.display = 'none';
+
+    } catch (e) {
+        console.error("読み取りエラー:", e);
+        alert("QRコードの形式が正しくないか、データが壊れています。");
+    }
+}
 
         // --- 学習画面の処理 ---
         function openDeck(id) {
@@ -1261,43 +1344,44 @@
 
         // --- QRコード表示のメイン処理 ---
         function showQR() {
-            // 1. 現在のデッキデータを取得
-            const deck = decks[currentDeckId];
-            if (!deck || deck.cards.length === 0) {
-                showToast("データがないためQRを作成できません");
-                return;
+                // 1. 現在のデッキデータを取得
+                const deck = decks[currentDeckId];
+                if (!deck || deck.cards.length === 0) {
+                    showToast("データがないためQRを作成できません");
+                    return;
+                }
+
+                // 2. データを文字列化
+                const rawString = deck.name + "::" + deck.cards.map(function (c) {
+                    return c.question + "|" + c.answer;
+                }).join("~");
+
+                // ★修正箇所：3. LZ-stringで強力に圧縮 (btoaの代わり)
+                const compressedData = LZString.compressToEncodedURIComponent(rawString);
+
+                // 4. 表示用コンテナを取得して中身をクリア
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = "";
+
+                // 5. ライブラリを使用してQR生成
+                try {
+                    new QRCode(qrContainer, {
+                        text: compressedData, // 圧縮したデータを渡す
+                        width: 256,
+                        height: 256,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        // ★修正箇所：L (Low) に下げることで、より長い文字列を格納可能にする
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+
+                    // 6. モーダルを表示
+                    document.getElementById('qrDisplayModal').style.display = 'flex';
+                } catch (err) {
+                    console.error("QR生成エラー:", err);
+                    alert("QRコードの生成に失敗しました。データ量をさらに減らしてください。");
+                }
             }
-
-            // 2. データを文字列化 (名前::問題1|答え1~問題2|答え2...)
-            const rawString = deck.name + "::" + deck.cards.map(function (c) {
-                return c.question + "|" + c.answer;
-            }).join("~");
-
-            // 3. Base64エンコード (日本語対応のためunescape/encodeURIComponentを使用)
-            const encodedData = btoa(unescape(encodeURIComponent(rawString)));
-
-            // 4. 表示用コンテナを取得して中身をクリア
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = "";
-
-            // 5. ライブラリを使用してQR生成
-            try {
-                new QRCode(qrContainer, {
-                    text: encodedData,
-                    width: 256,
-                    height: 256,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-
-                // 6. モーダルを表示
-                document.getElementById('qrDisplayModal').style.display = 'flex';
-            } catch (err) {
-                console.error("QR生成エラー:", err);
-                alert("QRコードの生成に失敗しました。データ量が多すぎる可能性があります。");
-            }
-        }
 
         async function startCamera() {
             document.getElementById('cameraModal').style.display = 'flex';
@@ -1592,6 +1676,28 @@
                     showToast("習得状況を含めて保存しました");
                 }
 
+                // --- 追加：メニュー開閉の制御 ---
+                function toggleMenu(event, id) {
+                        event.stopPropagation(); // 他のクリックイベントを邪魔しない
+
+                        const allMenus = document.querySelectorAll('.sub-menu');
+                        const targetMenu = document.getElementById(`menu-${id}`);
+
+                        // 他の開いているメニューを閉じる
+                        allMenus.forEach(m => {
+                            if (m !== targetMenu) m.classList.remove('active');
+                        });
+
+                        // ターゲットのメニューを表示/非表示
+                        targetMenu.classList.toggle('active');
+
+                        // 画面のどこかを触ったら閉じるようにする
+                        const closeHandler = () => {
+                            targetMenu.classList.remove('active');
+                            document.removeEventListener('click', closeHandler);
+                        };
+                        setTimeout(() => document.addEventListener('click', closeHandler), 10);
+                }
 
     </script>
 </body>
